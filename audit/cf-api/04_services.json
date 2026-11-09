@@ -1,0 +1,177 @@
+{
+  "result": [
+    {
+      "id": "cityforge-edge",
+      "default_environment": {
+        "environment": "production",
+        "script_tag": "313fb7d4b34f4540a8256bf74ebeef0a",
+        "created_on": "2026-08-22T19:44:10.212379Z",
+        "modified_on": "2026-08-22T20:19:48.750797Z",
+        "script": {
+          "created_on": "2026-08-22T19:44:10.212379Z",
+          "modified_on": "2026-08-22T20:19:48.750797Z",
+          "id": "cityforge-edge",
+          "tag": "313fb7d4b34f4540a8256bf74ebeef0a",
+          "tags": [],
+          "deployment_id": "",
+          "tail_consumers": null,
+          "logpush": false,
+          "has_assets": true,
+          "has_modules": true,
+          "etag": "f8559bd7c30a53fd0fe4a814fef8b5478cacb9f2b1f56ec361e1db6e4a08e8ee",
+          "handlers": [
+            "fetch"
+          ],
+          "named_handlers": [
+            {
+              "name": "CityforgeQuota",
+              "handlers": [
+                "class"
+              ]
+            },
+            {
+              "name": "CityforgeRoom",
+              "handlers": [
+                "class"
+              ]
+            },
+            {
+              "name": "buildAiSeats",
+              "handlers": [
+                "class"
+              ]
+            },
+            {
+              "name": "consumeEdgeRoomCreation",
+              "handlers": [
+                "class"
+              ]
+            },
+            {
+              "name": "createSession",
+              "handlers": [
+                "class"
+              ]
+            },
+            {
+              "name": "handleWorkerRequest",
+              "handlers": [
+                "class"
+              ]
+            },
+            {
+              "name": "isPublishedCityforgeOrigin",
+              "handlers": [
+                "class"
+              ]
+            },
+            {
+              "name": "issueWinnerTicket",
+              "handlers": [
+                "class"
+              ]
+            },
+            {
+              "name": "readProfileTicket",
+              "handlers": [
+                "class"
+              ]
+            },
+            {
+              "name": "readSession",
+              "handlers": [
+                "class"
+              ]
+            },
+            {
+              "name": "withCors",
+              "handlers": [
+                "class"
+              ]
+            }
+          ],
+          "last_deployed_from": "wrangler",
+          "migration_tag": "v2",
+          "compatibility_date": "2026-08-20",
+          "usage_model": "standard"
+        }
+      },
+      "created_on": "2026-08-22T19:44:10.212379Z",
+      "modified_on": "2026-08-22T20:19:48.750797Z",
+      "usage_model": "",
+      "environments": [
+        {
+          "environment": "production",
+          "script_tag": "313fb7d4b34f4540a8256bf74ebeef0a",
+          "created_on": "2026-08-22T19:44:10.212379Z",
+          "modified_on": "2026-08-22T20:19:48.750797Z"
+        }
+      ]
+    },
+    {
+      "id": "my-vless-proxy",
+      "default_environment": {
+        "environment": "production",
+        "script_tag": "bcfeb7ec4f00414aafeb5fe39bd37dba",
+        "created_on": "2026-08-01T11:22:57.160235Z",
+        "modified_on": "2026-08-02T08:41:58.133292Z",
+        "script": {
+          "created_on": "2026-08-01T11:22:57.160235Z",
+          "modified_on": "2026-08-02T08:41:58.133292Z",
+          "id": "my-vless-proxy",
+          "tag": "bcfeb7ec4f00414aafeb5fe39bd37dba",
+          "tags": null,
+          "deployment_id": "",
+          "tail_consumers": null,
+          "logpush": false,
+          "observability": {
+            "enabled": true,
+            "head_sampling_rate": 1,
+            "redact_query_string": false,
+            "logs": {
+              "enabled": true,
+              "head_sampling_rate": 1,
+              "persist": true,
+              "invocation_logs": true
+            },
+            "traces": {
+              "enabled": false,
+              "persist": true,
+              "head_sampling_rate": 1
+            }
+          },
+          "has_assets": false,
+          "has_modules": true,
+          "etag": "de51c4f9588f0ee6cca95356db8dcaa4e388471b47a1a99777e3d972b9293c3f",
+          "handlers": [
+            "fetch"
+          ],
+          "last_deployed_from": "quick_editor",
+          "compatibility_date": "2026-08-01",
+          "usage_model": "standard"
+        }
+      },
+      "created_on": "2026-08-01T11:22:57.160235Z",
+      "modified_on": "2026-08-02T08:41:58.133292Z",
+      "usage_model": "",
+      "environments": [
+        {
+          "environment": "production",
+          "script_tag": "bcfeb7ec4f00414aafeb5fe39bd37dba",
+          "created_on": "2026-08-01T11:22:57.160235Z",
+          "modified_on": "2026-08-02T08:41:58.133292Z"
+        }
+      ]
+    }
+  ],
+  "success": true,
+  "errors": null,
+  "messages": null,
+  "result_info": {
+    "page": 1,
+    "per_page": 100,
+    "count": 2,
+    "total_count": 2,
+    "total_pages": 1
+  }
+}

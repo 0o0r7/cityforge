@@ -1,0 +1,9 @@
+# این ریپو فقط مستندات/شواهد حسابرسی است — هرگز این‌ها را کامیت نکنید:
+.env
+.env.*
+*.pem
+*.key
+*token*
+credentials*
+node_modules/
+.DS_Store

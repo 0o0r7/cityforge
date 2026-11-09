@@ -1,0 +1,27 @@
+{
+  "result": [
+    {
+      "id": "eee6c991e4bf4cf5999ca6831b7347df",
+      "name": "cityforge-edge_CityforgeRoom",
+      "script": "cityforge-edge",
+      "class": "CityforgeRoom",
+      "use_sqlite": true
+    },
+    {
+      "id": "86b83ed9c2b543c7ae9634469d3cde76",
+      "name": "cityforge-edge_CityforgeQuota",
+      "script": "cityforge-edge",
+      "class": "CityforgeQuota",
+      "use_sqlite": true
+    }
+  ],
+  "success": true,
+  "errors": null,
+  "messages": null,
+  "result_info": {
+    "page": 1,
+    "per_page": 20,
+    "count": 2,
+    "total_count": 2
+  }
+}

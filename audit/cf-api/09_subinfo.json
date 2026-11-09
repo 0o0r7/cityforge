@@ -1,0 +1,833 @@
+--1ec33aee5e8fbb1c1124b51b97cc8cb3f3e84a338d2bd0cf35a7c2b98da6
+Content-Disposition: form-data; name="worker.js"
+
+var __defProp = Object.defineProperty;
+var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
+
+// shared/edgeConfig.ts
+var CITYFORGE_PRODUCTION_ORIGIN = "https://cityforge-2z7rzsms.manus.space";
+
+// shared/gameEngine.ts
+function createId() {
+  return globalThis.crypto.randomUUID();
+}
+__name(createId, "createId");
+function secureRandomInt(min, max) {
+  const span = max - min + 1;
+  const upperBound = Math.floor(4294967296 / span) * span;
+  const sample = new Uint32Array(1);
+  do {
+    globalThis.crypto.getRandomValues(sample);
+  } while (sample[0] >= upperBound);
+  return min + sample[0] % span;
+}
+__name(secureRandomInt, "secureRandomInt");
+var HUMAN_COLOR = "#e76f51";
+var AI_COLORS = ["#4f83cc", "#8a62d3", "#e9b949"];
+var DISTRICT_COLORS = ["#f3a95d", "#84c5a4", "#74b8e8", "#c99be8", "#ef9f9b"];
+var DISTRICT_TYPES = ["market", "park", "waterfront", "residential", "civic"];
+var DISTRICT_NAMES = [
+  "Sunrise Row",
+  "Cedar Commons",
+  "Canal Quay",
+  "Lemon Market",
+  "Bloom Square",
+  "Skyline Steps",
+  "Willow Walk",
+  "Harbor Lanterns",
+  "Coral Court",
+  "Foundry Lane",
+  "Garden Gate",
+  "Civic Terrace",
+  "Orchid Avenue",
+  "Tidewater Point",
+  "Mosaic Mile",
+  "Lantern Loop",
+  "Pavilion Park",
+  "Market Bridge",
+  "Vista Heights",
+  "Juniper Junction"
+];
+var copyState = /* @__PURE__ */ __name((value) => structuredClone(value), "copyState");
+function createDistricts() {
+  return DISTRICT_NAMES.map((name, index) => ({
+    id: `district-${index + 1}`,
+    name,
+    type: DISTRICT_TYPES[index % DISTRICT_TYPES.length],
+    color: DISTRICT_COLORS[index % DISTRICT_COLORS.length],
+    cost: 80 + index % 5 * 25 + Math.floor(index / 5) * 10,
+    baseRent: 18 + index % 5 * 7 + Math.floor(index / 5) * 3,
+    upgradeCost: 55 + index % 4 * 15,
+    ownerId: null,
+    level: 0
+  }));
+}
+__name(createDistricts, "createDistricts");
+var GameEngine = class _GameEngine {
+  static {
+    __name(this, "GameEngine");
+  }
+  state;
+  diceRoller;
+  constructor(options) {
+    if (options.players.length < 2 || options.players.length > 4) {
+      throw new Error("A match needs between two and four players.");
+    }
+    const players = options.players.map((player, index) => ({
+      id: player.id,
+      name: player.name,
+      avatar: player.avatar,
+      color: player.color || (index === 0 ? HUMAN_COLOR : AI_COLORS[index - 1]),
+      kind: player.kind ?? "human",
+      personality: player.personality,
+      credits: 520,
+      position: 0,
+      districtIds: [],
+      eliminated: false
+    }));
+    const now = Date.now();
+    this.state = {
+      id: options.id ?? createId(),
+      status: "active",
+      players,
+      districts: createDistricts(),
+      currentPlayerId: players[0].id,
+      turn: 1,
+      round: 1,
+      phase: "roll",
+      lastDice: null,
+      activeTrade: null,
+      events: [
+        {
+          id: createId(),
+          type: "turn",
+          message: `${players[0].name} starts the first turn.`,
+          createdAt: now
+        }
+      ],
+      winnerId: null,
+      updatedAt: now
+    };
+    this.diceRoller = options.diceRoller ?? (() => secureRandomInt(1, 6));
+  }
+  static hydrate(state, diceRoller) {
+    const engine = Object.create(_GameEngine.prototype);
+    engine.state = copyState(state);
+    engine.diceRoller = diceRoller ?? (() => secureRandomInt(1, 6));
+    return engine;
+  }
+  getState() {
+    return copyState(this.state);
+  }
+  getCurrentPlayer() {
+    return this.requirePlayer(this.state.currentPlayerId);
+  }
+  applyAction(actorId, action) {
+    if (this.state.status !== "active") throw new Error("This match has already finished.");
+    switch (action.type) {
+      case "roll":
+        this.roll(actorId);
+        break;
+      case "buy":
+        this.buyCurrentDistrict(actorId);
+        break;
+      case "upgrade":
+        this.upgradeCurrentDistrict(actorId);
+        break;
+      case "endTurn":
+        this.endTurn(actorId);
+        break;
+      case "proposeTrade":
+        this.proposeTrade(actorId, action);
+        break;
+      case "respondTrade":
+        this.respondToTrade(actorId, action.proposalId, action.accept);
+        break;
+    }
+    this.state.updatedAt = Date.now();
+    return this.getState();
+  }
+  runAiTurns(maxTurns = 12) {
+    let processed = 0;
+    while (this.state.status === "active" && this.getCurrentPlayer().kind === "ai" && processed < maxTurns) {
+      const ai = this.getCurrentPlayer();
+      this.roll(ai.id);
+      const district = this.currentDistrict();
+      if (district.ownerId === null && this.shouldBuy(ai, district)) {
+        this.buyCurrentDistrict(ai.id);
+      } else if (district.ownerId === ai.id && this.shouldUpgrade(ai, district)) {
+        this.upgradeCurrentDistrict(ai.id);
+      }
+      if (this.state.status === "active") this.endTurn(ai.id);
+      processed += 1;
+    }
+    this.state.updatedAt = Date.now();
+    return this.getState();
+  }
+  claimAiSeat(player) {
+    if (this.state.status !== "active") throw new Error("This match has already finished.");
+    if (this.state.players.some((item) => item.id === player.id)) return this.getState();
+    const seat = this.state.players.find((item) => item.kind === "ai" && !item.eliminated);
+    if (!seat) throw new Error("There are no open city council seats left.");
+    const previousId = seat.id;
+    seat.id = player.id;
+    seat.name = player.name;
+    seat.avatar = player.avatar;
+    seat.kind = "human";
+    seat.personality = void 0;
+    this.state.districts.forEach((district) => {
+      if (district.ownerId === previousId) district.ownerId = player.id;
+    });
+    if (this.state.currentPlayerId === previousId) this.state.currentPlayerId = player.id;
+    if (this.state.activeTrade?.proposerId === previousId) this.state.activeTrade.proposerId = player.id;
+    if (this.state.activeTrade?.recipientId === previousId) this.state.activeTrade.recipientId = player.id;
+    this.addEvent("turn", `${player.name} joined the city council.`);
+    this.state.updatedAt = Date.now();
+    return this.getState();
+  }
+  resolveAiTradeIfNeeded() {
+    const proposal = this.state.activeTrade;
+    if (!proposal || proposal.status !== "pending") return this.getState();
+    const recipient = this.requirePlayer(proposal.recipientId);
+    if (recipient.kind !== "ai") return this.getState();
+    const accept = this.shouldAiAcceptTrade(recipient, proposal);
+    this.respondToTrade(recipient.id, proposal.id, accept);
+    this.state.updatedAt = Date.now();
+    return this.getState();
+  }
+  roll(actorId) {
+    this.assertCurrentPlayer(actorId);
+    this.assertPhase("roll");
+    const dice = this.diceRoller();
+    if (!Number.isInteger(dice) || dice < 1 || dice > 6) {
+      throw new Error("The server dice roller produced an invalid value.");
+    }
+    const player = this.requirePlayer(actorId);
+    player.position = (player.position + dice) % this.state.districts.length;
+    player.credits += player.position < dice ? 80 : 0;
+    this.state.lastDice = dice;
+    this.state.phase = "resolve";
+    const district = this.currentDistrict();
+    this.addEvent("roll", `${player.name} rolled ${dice} and arrived at ${district.name}.`);
+    if (district.ownerId && district.ownerId !== actorId) {
+      const owner = this.requirePlayer(district.ownerId);
+      const rent = this.calculateRent(district);
+      const paid = Math.min(player.credits, rent);
+      player.credits -= paid;
+      owner.credits += paid;
+      this.addEvent("rent", `${player.name} paid ${paid} city credits to ${owner.name}.`);
+      if (player.credits <= 0) {
+        player.eliminated = true;
+        this.addEvent("rent", `${player.name} is out of city credits.`);
+      }
+      this.checkWinCondition();
+    }
+  }
+  buyCurrentDistrict(actorId) {
+    this.assertCurrentPlayer(actorId);
+    this.assertPhase("resolve");
+    const player = this.requirePlayer(actorId);
+    const district = this.currentDistrict();
+    if (district.ownerId !== null) throw new Error("This district already belongs to a player.");
+    if (player.credits < district.cost) throw new Error("You do not have enough city credits.");
+    player.credits -= district.cost;
+    district.ownerId = player.id;
+    district.level = 1;
+    player.districtIds.push(district.id);
+    this.state.phase = "end";
+    this.addEvent("purchase", `${player.name} acquired ${district.name}.`);
+  }
+  upgradeCurrentDistrict(actorId) {
+    this.assertCurrentPlayer(actorId);
+    this.assertPhase("resolve");
+    const player = this.requirePlayer(actorId);
+    const district = this.currentDistrict();
+    if (district.ownerId !== player.id) throw new Error("You can only upgrade your own district.");
+    if (district.level >= 3) throw new Error("This district is already fully upgraded.");
+    if (player.credits < district.upgradeCost) throw new Error("You do not have enough city credits to upgrade.");
+    player.credits -= district.upgradeCost;
+    district.level += 1;
+    this.state.phase = "end";
+    this.addEvent("upgrade", `${player.name} upgraded ${district.name} to level ${district.level}.`);
+  }
+  endTurn(actorId) {
+    this.assertCurrentPlayer(actorId);
+    if (this.state.phase === "roll") throw new Error("Roll the dice before ending your turn.");
+    this.checkWinCondition();
+    if (this.state.status !== "active") return;
+    const activePlayers = this.state.players.filter((player) => !player.eliminated);
+    const currentIndex = activePlayers.findIndex((player) => player.id === actorId);
+    const nextPlayer = activePlayers[(currentIndex + 1) % activePlayers.length];
+    if (nextPlayer.id === activePlayers[0].id) this.state.round += 1;
+    this.state.turn += 1;
+    this.state.currentPlayerId = nextPlayer.id;
+    this.state.phase = "roll";
+    this.state.lastDice = null;
+    this.state.activeTrade = null;
+    this.addEvent("turn", `It is now ${nextPlayer.name}'s turn.`);
+    this.checkWinCondition();
+  }
+  proposeTrade(actorId, action) {
+    this.assertCurrentPlayer(actorId);
+    if (this.state.phase !== "resolve" && this.state.phase !== "end") {
+      throw new Error("Trades can only be proposed after rolling the dice.");
+    }
+    if (this.state.activeTrade?.status === "pending") throw new Error("Resolve the current trade proposal first.");
+    const proposer = this.requirePlayer(actorId);
+    const recipient = this.requirePlayer(action.recipientId);
+    if (proposer.id === recipient.id || recipient.eliminated) throw new Error("Choose an active opponent for the trade.");
+    const creditOffer = Math.max(0, action.creditOffer ?? 0);
+    if (creditOffer > proposer.credits) throw new Error("The proposed credit offer exceeds your balance.");
+    const offeredDistrictId = action.offeredDistrictId ?? null;
+    const requestedDistrictId = action.requestedDistrictId ?? null;
+    if (!offeredDistrictId && !requestedDistrictId && creditOffer === 0) {
+      throw new Error("A trade needs a district or city-credit offer.");
+    }
+    if (offeredDistrictId && !proposer.districtIds.includes(offeredDistrictId)) {
+      throw new Error("You can only offer a district you own.");
+    }
+    if (requestedDistrictId && !recipient.districtIds.includes(requestedDistrictId)) {
+      throw new Error("You can only request a district owned by the recipient.");
+    }
+    this.state.activeTrade = {
+      id: createId(),
+      proposerId: proposer.id,
+      recipientId: recipient.id,
+      offeredDistrictId,
+      requestedDistrictId,
+      creditOffer,
+      status: "pending",
+      createdAt: Date.now()
+    };
+    this.state.phase = "trade";
+    this.addEvent("trade", `${proposer.name} proposed a trade to ${recipient.name}.`);
+  }
+  respondToTrade(actorId, proposalId, accept) {
+    const proposal = this.state.activeTrade;
+    if (!proposal || proposal.id !== proposalId || proposal.status !== "pending") {
+      throw new Error("That trade proposal is no longer active.");
+    }
+    if (proposal.recipientId !== actorId) throw new Error("Only the receiving player can answer this trade.");
+    const proposer = this.requirePlayer(proposal.proposerId);
+    const recipient = this.requirePlayer(proposal.recipientId);
+    if (!accept) {
+      proposal.status = "declined";
+      this.state.phase = "end";
+      this.addEvent("trade", `${recipient.name} declined the trade proposal.`);
+      return;
+    }
+    if (proposal.creditOffer > proposer.credits) throw new Error("The proposer no longer has enough city credits.");
+    this.transferDistrict(proposer, recipient, proposal.offeredDistrictId);
+    this.transferDistrict(recipient, proposer, proposal.requestedDistrictId);
+    proposer.credits -= proposal.creditOffer;
+    recipient.credits += proposal.creditOffer;
+    proposal.status = "accepted";
+    this.state.phase = "end";
+    this.addEvent("trade", `${recipient.name} accepted the trade proposal.`);
+  }
+  transferDistrict(from, to, districtId) {
+    if (!districtId) return;
+    const district = this.state.districts.find((item) => item.id === districtId);
+    if (!district || district.ownerId !== from.id) throw new Error("The trade district ownership changed before acceptance.");
+    from.districtIds = from.districtIds.filter((id) => id !== districtId);
+    to.districtIds.push(districtId);
+    district.ownerId = to.id;
+  }
+  shouldBuy(player, district) {
+    if (district.ownerId !== null || player.credits < district.cost) return false;
+    const remaining = player.credits - district.cost;
+    switch (player.personality) {
+      case "Cautious Investor":
+        return remaining >= 260;
+      case "Aggressive Developer":
+        return remaining >= 80;
+      case "Opportunist Negotiator":
+        return district.type === "market" || district.type === "waterfront" || remaining >= 190;
+      case "Balanced Strategist":
+      default:
+        return remaining >= 160;
+    }
+  }
+  shouldUpgrade(player, district) {
+    if (district.ownerId !== player.id || district.level >= 3 || player.credits < district.upgradeCost) return false;
+    const remaining = player.credits - district.upgradeCost;
+    switch (player.personality) {
+      case "Cautious Investor":
+        return district.level === 1 && remaining >= 300;
+      case "Aggressive Developer":
+        return remaining >= 90;
+      case "Opportunist Negotiator":
+        return district.type === "market" && remaining >= 160;
+      case "Balanced Strategist":
+      default:
+        return remaining >= 190;
+    }
+  }
+  shouldAiAcceptTrade(player, proposal) {
+    const offered = proposal.offeredDistrictId ? this.state.districts.find((district) => district.id === proposal.offeredDistrictId) : void 0;
+    const requested = proposal.requestedDistrictId ? this.state.districts.find((district) => district.id === proposal.requestedDistrictId) : void 0;
+    const receivedValue = (offered?.cost ?? 0) + proposal.creditOffer;
+    const surrenderedValue = requested?.cost ?? 0;
+    const margin = receivedValue - surrenderedValue;
+    switch (player.personality) {
+      case "Cautious Investor":
+        return margin >= 45;
+      case "Aggressive Developer":
+        return Boolean(offered && offered.level >= 2) || margin >= 5;
+      case "Opportunist Negotiator":
+        return margin >= 10 || offered?.type === "market" && requested?.type !== "market";
+      case "Balanced Strategist":
+      default:
+        return margin >= 20;
+    }
+  }
+  calculateRent(district) {
+    return district.baseRent * Math.max(1, district.level);
+  }
+  currentDistrict() {
+    return this.state.districts[this.getCurrentPlayer().position];
+  }
+  requirePlayer(playerId) {
+    const player = this.state.players.find((item) => item.id === playerId);
+    if (!player) throw new Error("This player is not part of the match.");
+    return player;
+  }
+  assertCurrentPlayer(actorId) {
+    if (this.state.currentPlayerId !== actorId) throw new Error("It is not your turn.");
+    const player = this.requirePlayer(actorId);
+    if (player.eliminated) throw new Error("This player is no longer active.");
+  }
+  assertPhase(expected) {
+    if (this.state.phase !== expected) throw new Error(`This action is only available during the ${expected} phase.`);
+  }
+  checkWinCondition() {
+    const active = this.state.players.filter((player) => !player.eliminated);
+    if (active.length === 1) {
+      this.finish(active[0]);
+      return;
+    }
+    if (this.state.round > 18) {
+      const winner = [...active].sort((a, b) => this.scorePlayer(b) - this.scorePlayer(a))[0];
+      this.finish(winner);
+    }
+  }
+  scorePlayer(player) {
+    const districtValue = player.districtIds.reduce((total, districtId) => {
+      const district = this.state.districts.find((item) => item.id === districtId);
+      return total + (district ? district.cost + district.level * district.upgradeCost : 0);
+    }, 0);
+    return player.credits + districtValue;
+  }
+  finish(winner) {
+    if (this.state.status === "finished") return;
+    this.state.status = "finished";
+    this.state.phase = "end";
+    this.state.winnerId = winner.id;
+    this.addEvent("win", `${winner.name} shaped the winning city.`);
+  }
+  addEvent(type, message) {
+    this.state.events = [
+      { id: createId(), type, message, createdAt: Date.now() },
+      ...this.state.events
+    ].slice(0, 24);
+  }
+};
+
+// cloudflare/worker.ts
+var encoder = new TextEncoder();
+var decoder = new TextDecoder();
+var aiColors = ["#4f83cc", "#8a62d3", "#e9b949", "#76c8d6"];
+var aiProfiles = [
+  { name: "Mira Vale", avatar: "ai-1", personality: "Cautious Investor" },
+  { name: "Rowan Flint", avatar: "ai-2", personality: "Aggressive Developer" },
+  { name: "Sage Flores", avatar: "ai-3", personality: "Opportunist Negotiator" },
+  { name: "Toma Reed", avatar: "ai-4", personality: "Balanced Strategist" }
+];
+var roomCreationWindowMs = 6e4;
+var roomCreationLimit = 4;
+async function consumeEdgeRoomCreation(quota, playerId) {
+  const response = await quota.get(quota.idFromName(playerId)).fetch("https://cityforge-quota/consume", { method: "POST" });
+  return response.status === 201;
+}
+__name(consumeEdgeRoomCreation, "consumeEdgeRoomCreation");
+function corsHeaders(request) {
+  const origin = request.headers.get("origin");
+  if (origin !== CITYFORGE_PRODUCTION_ORIGIN) return new Headers();
+  return new Headers({
+    "access-control-allow-origin": origin,
+    "access-control-allow-credentials": "true",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-headers": "content-type",
+    "vary": "Origin"
+  });
+}
+__name(corsHeaders, "corsHeaders");
+function isPublishedCityforgeOrigin(request) {
+  return request.headers.get("origin") === CITYFORGE_PRODUCTION_ORIGIN;
+}
+__name(isPublishedCityforgeOrigin, "isPublishedCityforgeOrigin");
+function withCors(request, response) {
+  if (response.status === 101) return response;
+  const headers = new Headers(response.headers);
+  for (const [key, value] of corsHeaders(request)) headers.set(key, value);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+__name(withCors, "withCors");
+var json = /* @__PURE__ */ __name((value, init = {}) => new Response(JSON.stringify(value), {
+  ...init,
+  headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...init.headers }
+}), "json");
+function encodeBase64Url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+}
+__name(encodeBase64Url, "encodeBase64Url");
+function decodeBase64Url(value) {
+  const padded = value.replaceAll("-", "+").replaceAll("_", "/") + "===".slice((value.length + 3) % 4);
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+__name(decodeBase64Url, "decodeBase64Url");
+async function sign(value, secret) {
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return encodeBase64Url(new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(value))));
+}
+__name(sign, "sign");
+function sameValue(left, right) {
+  let difference = left.length ^ right.length;
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    difference |= (left.charCodeAt(index) || 0) ^ (right.charCodeAt(index) || 0);
+  }
+  return difference === 0;
+}
+__name(sameValue, "sameValue");
+async function createSession(name, avatar, secret, profileUserId) {
+  const payload = { playerId: `player-${crypto.randomUUID()}`, name, avatar, expiresAt: Date.now() + 1e3 * 60 * 60 * 24 * 30, profileUserId };
+  const encoded = encodeBase64Url(encoder.encode(JSON.stringify(payload)));
+  return { payload, token: `${encoded}.${await sign(encoded, secret)}` };
+}
+__name(createSession, "createSession");
+async function readSession(request, secret) {
+  const token = request.headers.get("cookie")?.split(";").map((item) => item.trim()).find((item) => item.startsWith("cityforge_session="))?.slice("cityforge_session=".length);
+  if (!token) return null;
+  const [encoded, signature] = token.split(".");
+  if (!encoded || !signature || !sameValue(await sign(encoded, secret), signature)) return null;
+  try {
+    const payload = JSON.parse(decoder.decode(decodeBase64Url(encoded)));
+    return payload.expiresAt > Date.now() && payload.playerId && payload.name ? payload : null;
+  } catch {
+    return null;
+  }
+}
+__name(readSession, "readSession");
+async function readProfileTicket(token, secret) {
+  if (!token) return null;
+  const [encoded, signature] = token.split(".");
+  if (!encoded || !signature || !sameValue(await sign(encoded, secret), signature)) return null;
+  try {
+    const payload = JSON.parse(decoder.decode(decodeBase64Url(encoded)));
+    return payload.purpose === "edge-session" && payload.expiresAt && payload.expiresAt > Date.now() && Number.isSafeInteger(payload.userId) && payload.userId > 0 ? payload.userId : null;
+  } catch {
+    return null;
+  }
+}
+__name(readProfileTicket, "readProfileTicket");
+async function issueWinnerTicket(userId, matchId, playerCount, secret) {
+  const payload = { userId, matchId, playerCount, purpose: "edge-winner", expiresAt: Date.now() + 1e3 * 60 * 10 };
+  const encoded = encodeBase64Url(encoder.encode(JSON.stringify(payload)));
+  return `${encoded}.${await sign(encoded, secret)}`;
+}
+__name(issueWinnerTicket, "issueWinnerTicket");
+function buildSeats(session, aiCount) {
+  const count = Math.max(1, Math.min(3, Math.floor(aiCount)));
+  return [
+    { id: session.playerId, name: session.name, avatar: session.avatar, color: HUMAN_COLOR, kind: "human" },
+    ...Array.from({ length: count }, (_, index) => ({
+      id: `room-ai-${crypto.randomUUID()}`,
+      ...aiProfiles[index],
+      color: aiColors[index],
+      kind: "ai"
+    }))
+  ];
+}
+__name(buildSeats, "buildSeats");
+function buildAiSeats(count) {
+  return Array.from({ length: Math.max(1, Math.min(4, count)) }, (_, index) => {
+    const profile = aiProfiles[index % aiProfiles.length];
+    return {
+      id: `room-ai-${crypto.randomUUID()}`,
+      ...profile,
+      color: aiColors[index % aiColors.length],
+      kind: "ai"
+    };
+  });
+}
+__name(buildAiSeats, "buildAiSeats");
+var CityforgeQuota = class {
+  constructor(ctx, _env) {
+    this.ctx = ctx;
+    this._env = _env;
+  }
+  ctx;
+  _env;
+  static {
+    __name(this, "CityforgeQuota");
+  }
+  async fetch(request) {
+    if (new URL(request.url).pathname !== "/consume" || request.method !== "POST") return new Response("Not found", { status: 404 });
+    const now = Date.now();
+    const current = await this.ctx.storage.get("room-creation-window");
+    if (!current || now - current.startedAt >= roomCreationWindowMs) {
+      await this.ctx.storage.put("room-creation-window", { startedAt: now, count: 1 });
+      return json({ allowed: true }, { status: 201 });
+    }
+    if (current.count >= roomCreationLimit) return json({ allowed: false }, { status: 429 });
+    await this.ctx.storage.put("room-creation-window", { ...current, count: current.count + 1 });
+    return json({ allowed: true }, { status: 201 });
+  }
+};
+var CityforgeRoom = class {
+  constructor(ctx, _env) {
+    this.ctx = ctx;
+    this._env = _env;
+  }
+  ctx;
+  _env;
+  static {
+    __name(this, "CityforgeRoom");
+  }
+  async fetch(request) {
+    const url = new URL(request.url);
+    if (url.pathname === "/initialize" && request.method === "POST") {
+      const payload = await request.json();
+      if (!Array.isArray(payload.players) || payload.players.length < 2 || payload.players.length > 4) {
+        return json({ message: "A room needs between two and four valid seats." }, { status: 400 });
+      }
+      const engine = new GameEngine({ id: this.ctx.id.toString(), players: payload.players });
+      const state = engine.getState();
+      await this.save(state);
+      return json(state, { status: 201 });
+    }
+    const playerId = request.headers.get("x-cityforge-player");
+    if (!playerId) return json({ message: "A signed Cityforge session is required." }, { status: 401 });
+    if (url.pathname === "/profile-binding" && request.method === "POST") {
+      if (!sameValue(request.headers.get("x-cityforge-bridge-internal") ?? "", this._env.PROFILE_BRIDGE_SECRET)) return json({ message: "Internal bridge authentication is required." }, { status: 403 });
+      const profileUserId = Number(request.headers.get("x-cityforge-profile-id"));
+      if (!Number.isSafeInteger(profileUserId) || profileUserId < 1) return json({ message: "A valid authenticated profile is required." }, { status: 400 });
+      const room = await this.load();
+      if (!room.state.players.some((player) => player.id === playerId)) return json({ message: "You are not seated at this table." }, { status: 403 });
+      await this.ctx.storage.put(`profile:${playerId}`, profileUserId);
+      return json({ ok: true });
+    }
+    if (url.pathname === "/state" && request.method === "GET") {
+      const room = await this.load();
+      if (!room.state.players.some((player) => player.id === playerId)) return json({ message: "You are not seated at this table." }, { status: 403 });
+      return json(room.state);
+    }
+    if (url.pathname === "/eligibility" && request.method === "GET") {
+      const room = await this.load();
+      if (!room.state.players.some((player) => player.id === playerId)) return json({ message: "You are not seated at this table." }, { status: 403 });
+      const winner = room.state.players.find((player) => player.id === room.state.winnerId);
+      const profileUserId = winner?.id ? await this.ctx.storage.get(`profile:${winner.id}`) : null;
+      return json({
+        status: room.state.status === "finished" && winner?.kind === "human" && winner.id === playerId ? "eligible" : "locked",
+        matchId: room.state.id,
+        winnerTicket: room.state.status === "finished" && winner?.kind === "human" && winner.id === playerId && profileUserId ? await issueWinnerTicket(profileUserId, room.state.id, room.state.players.length, this._env.PROFILE_BRIDGE_SECRET) : void 0
+      });
+    }
+    if (url.pathname === "/action" && request.method === "POST") {
+      const payload = await request.json();
+      if (!payload.action) return json({ message: "A game action is required." }, { status: 400 });
+      return json(await this.applyAction(playerId, payload.action));
+    }
+    if (url.pathname === "/join" && request.method === "POST") {
+      const name = request.headers.get("x-cityforge-player-name");
+      const avatar = request.headers.get("x-cityforge-player-avatar");
+      if (!name || !avatar) return json({ message: "A signed player identity is required." }, { status: 401 });
+      const room = await this.load();
+      const engine = GameEngine.hydrate(room.state);
+      const state = engine.claimAiSeat({ id: playerId, name, avatar });
+      await this.save(state);
+      this.broadcast(state);
+      return json(state);
+    }
+    if (url.pathname === "/connect") {
+      if (!request.headers.get("Upgrade")?.toLowerCase().includes("websocket")) {
+        return new Response("A WebSocket upgrade is required.", { status: 400 });
+      }
+      if (!isPublishedCityforgeOrigin(request)) {
+        return new Response("The Cityforge origin is not allowed to open this room connection.", { status: 403 });
+      }
+      const room = await this.load();
+      if (!room.state.players.some((player) => player.id === playerId)) return new Response("You are not seated at this table.", { status: 403 });
+      const pair = new WebSocketPair();
+      const [client, server] = Object.values(pair);
+      this.ctx.acceptWebSocket(server, [playerId]);
+      server.send(JSON.stringify({ type: "state", state: room.state }));
+      return new Response(null, { status: 101, webSocket: client });
+    }
+    return new Response("Not found", { status: 404 });
+  }
+  async webSocketMessage(socket, message) {
+    try {
+      if (typeof message !== "string") throw new Error("Game actions must be text JSON.");
+      const payload = JSON.parse(message);
+      if (payload.type !== "action" || !payload.action) throw new Error("Unknown room message.");
+      const actorId = this.ctx.getWebSocketTags(socket)[0];
+      if (!actorId) throw new Error("This socket is not seated at the table.");
+      await this.applyAction(actorId, payload.action);
+    } catch (error) {
+      socket.send(JSON.stringify({ type: "error", message: error instanceof Error ? error.message : "The action was rejected." }));
+    }
+  }
+  webSocketClose(socket) {
+    socket.close(1e3, "Cityforge connection closed");
+  }
+  async load() {
+    const state = await this.ctx.storage.get("state");
+    if (!state) throw new Error("This room has not been initialized.");
+    return { state };
+  }
+  async save(state) {
+    await this.ctx.storage.put("state", state);
+    await this.ctx.storage.put(`event:${state.turn}`, state.events[0]);
+  }
+  async applyAction(actorId, action) {
+    const room = await this.load();
+    if (!room.state.players.some((player) => player.id === actorId)) throw new Error("You are not seated at this table.");
+    const engine = GameEngine.hydrate(room.state);
+    let state = engine.applyAction(actorId, action);
+    if (state.activeTrade?.status === "pending") state = engine.resolveAiTradeIfNeeded();
+    if (state.status === "active" && state.currentPlayerId !== actorId) state = engine.runAiTurns();
+    await this.save(state);
+    this.broadcast(state);
+    return state;
+  }
+  broadcast(state) {
+    const frame = JSON.stringify({ type: "state", state });
+    for (const socket of this.ctx.getWebSockets()) socket.send(frame);
+  }
+};
+async function handleWorkerRequest(request, env) {
+  const url = new URL(request.url);
+  if (url.pathname === "/api/session" && request.method === "POST") {
+    const body = await request.json();
+    const profileUserId = await readProfileTicket(body.profileTicket, env.PROFILE_BRIDGE_SECRET);
+    const session2 = await createSession((body.name || "City Builder").slice(0, 32), (body.avatar || "sun").slice(0, 32), env.SESSION_SECRET, profileUserId ?? void 0);
+    return json({ playerId: session2.payload.playerId, name: session2.payload.name, avatar: session2.payload.avatar }, {
+      status: 201,
+      headers: { "set-cookie": `cityforge_session=${session2.token}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=2592000` }
+    });
+  }
+  const session = await readSession(request, env.SESSION_SECRET);
+  if (url.pathname === "/api/rooms" && request.method === "POST") {
+    if (!session) return json({ message: "Create a Cityforge session before starting a table." }, { status: 401 });
+    if (!await consumeEdgeRoomCreation(env.CITYFORGE_QUOTA, session.playerId)) return json({ message: "The city is opening tables quickly. Please wait one minute before opening another edge room." }, { status: 429 });
+    const body = await request.json();
+    const id = env.CITYFORGE_ROOMS.idFromName(crypto.randomUUID());
+    const stub = env.CITYFORGE_ROOMS.get(id);
+    const response = await stub.fetch("https://cityforge-room/initialize", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ players: buildSeats(session, body.aiCount ?? 2) })
+    });
+    if (session.profileUserId && response.ok) {
+      const binding = await stub.fetch("https://cityforge-room/profile-binding", { method: "POST", headers: {
+        "x-cityforge-player": session.playerId,
+        "x-cityforge-profile-id": String(session.profileUserId),
+        "x-cityforge-bridge-internal": env.PROFILE_BRIDGE_SECRET
+      } });
+      if (!binding.ok) return json({ message: "Your authenticated Cityforge profile could not be linked to this table. Please try again." }, { status: 502 });
+    }
+    return json({ roomId: id.toString(), state: await response.json() }, { status: response.status });
+  }
+  if (url.pathname === "/api/public-rooms" && request.method === "POST") {
+    if (!session) return json({ message: "Create a Cityforge session before opening a public table." }, { status: 401 });
+    if (!await consumeEdgeRoomCreation(env.CITYFORGE_QUOTA, session.playerId)) return json({ message: "The city is opening tables quickly. Please wait one minute before opening another edge room." }, { status: 429 });
+    const id = env.CITYFORGE_ROOMS.idFromName(crypto.randomUUID());
+    const stub = env.CITYFORGE_ROOMS.get(id);
+    const initialized = await stub.fetch("https://cityforge-room/initialize", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ players: buildAiSeats(4) })
+    });
+    if (!initialized.ok) return initialized;
+    const headers = new Headers({
+      "x-cityforge-player": session.playerId,
+      "x-cityforge-player-name": session.name,
+      "x-cityforge-player-avatar": session.avatar
+    });
+    const joined = await stub.fetch(new Request("https://cityforge-room/join", { method: "POST", headers }));
+    if (session.profileUserId && joined.ok) {
+      const binding = await stub.fetch("https://cityforge-room/profile-binding", { method: "POST", headers: {
+        "x-cityforge-player": session.playerId,
+        "x-cityforge-profile-id": String(session.profileUserId),
+        "x-cityforge-bridge-internal": env.PROFILE_BRIDGE_SECRET
+      } });
+      if (!binding.ok) return json({ message: "Your authenticated Cityforge profile could not be linked to this table. Please try again." }, { status: 502 });
+    }
+    return json({ roomId: id.toString(), state: await joined.json(), visibility: "public" }, { status: joined.status });
+  }
+  if (url.pathname === "/api/join-room" && request.method === "POST") {
+    if (!session) return json({ message: "Create a Cityforge session before joining a table." }, { status: 401 });
+    const body = await request.json();
+    if (!body.roomId) return json({ message: "A city table code is required." }, { status: 400 });
+    const headers = new Headers({
+      "x-cityforge-player": session.playerId,
+      "x-cityforge-player-name": session.name,
+      "x-cityforge-player-avatar": session.avatar
+    });
+    const joined = await env.CITYFORGE_ROOMS.get(env.CITYFORGE_ROOMS.idFromString(body.roomId)).fetch(
+      new Request("https://cityforge-room/join", { method: "POST", headers })
+    );
+    if (session.profileUserId && joined.ok) {
+      const binding = await env.CITYFORGE_ROOMS.get(env.CITYFORGE_ROOMS.idFromString(body.roomId)).fetch("https://cityforge-room/profile-binding", { method: "POST", headers: {
+        "x-cityforge-player": session.playerId,
+        "x-cityforge-profile-id": String(session.profileUserId),
+        "x-cityforge-bridge-internal": env.PROFILE_BRIDGE_SECRET
+      } });
+      if (!binding.ok) return json({ message: "Your authenticated Cityforge profile could not be linked to this table. Please try again." }, { status: 502 });
+    }
+    return json({ roomId: body.roomId, state: await joined.json() }, { status: joined.status });
+  }
+  const roomMatch = url.pathname.match(/^\/api\/room\/([^/]+)(\/.*)?$/);
+  if (roomMatch) {
+    if (!session) return json({ message: "A signed Cityforge session is required." }, { status: 401 });
+    const roomId = decodeURIComponent(roomMatch[1]);
+    const suffix = roomMatch[2] || "/state";
+    const headers = new Headers(request.headers);
+    headers.set("x-cityforge-player", session.playerId);
+    const forwarded = new Request(`https://cityforge-room${suffix}${url.search}`, {
+      method: request.method,
+      headers,
+      body: request.method === "GET" || request.method === "HEAD" ? void 0 : request.body
+    });
+    return env.CITYFORGE_ROOMS.get(env.CITYFORGE_ROOMS.idFromString(roomId)).fetch(forwarded);
+  }
+  return env.ASSETS.fetch(request);
+}
+__name(handleWorkerRequest, "handleWorkerRequest");
+var worker_default = {
+  async fetch(request, env) {
+    if (request.method === "OPTIONS") return withCors(request, new Response(null, { status: 204 }));
+    return withCors(request, await handleWorkerRequest(request, env));
+  }
+};
+export {
+  CityforgeQuota,
+  CityforgeRoom,
+  buildAiSeats,
+  consumeEdgeRoomCreation,
+  createSession,
+  worker_default as default,
+  handleWorkerRequest,
+  isPublishedCityforgeOrigin,
+  issueWinnerTicket,
+  readProfileTicket,
+  readSession,
+  withCors
+};
+//# sourceMappingURL=worker.js.map
+
+--1ec33aee5e8fbb1c1124b51b97cc8cb3f3e84a338d2bd0cf35a7c2b98da6--
