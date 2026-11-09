@@ -1,54 +1,60 @@
-# cityforge — بک‌اپ مستندات و شواهد حسابرسی
+# cityforge — Audit Documentation & Evidence Backup
 
-این ریپو، **بک‌اپ رسمی پژوهش و حسابرسی اعتبارسنجی فنی CityForge** (دنبالهٔ ARK-Monopoly از کاتالوگ Candle Climber) است که در 2026-11-09 ساخته شد تا در برابر ریست‌های سندباکس کاری، شواهد و سورس بازیابی‌شده برای آینده محفوظ بماند.
+This repository is the **official backup of the CityForge technical validation audit** (the ARC-Monopoly successor from the Candle Climber catalog), created on 2026-11-09 to preserve evidence and the recovered source code against recurring workspace sandbox resets.
 
-## چرا این بک‌اپ مهم است
-- پروژهٔ Manus میزبان CityForge **حذف شده** (`[not_found] project not found`) و ورکر `cityforge-edge` از **2026-08-22** منجمد است.
-- تنها نسخهٔ شناخته‌شدهٔ سورس بک‌اند (828 خط) از API `subinfo` کلادفلر بازیابی شد و فقط همین‌جاست: [`audit/cf-api/cityforge-edge-worker-source.js`](audit/cf-api/cityforge-edge-worker-source.js).
-- اسنپ‌شوت فرانت‌اند منتشرشده (باندل‌ها) در [`artifacts/`](artifacts/README.md) با هش SHA-256 ثبت شده است.
+## Why this backup matters
+- The Manus project that hosted CityForge has been **deleted** (`[not_found] project not found`), and the `cityforge-edge` Worker has been **frozen since 2026-08-22**.
+- The only known copy of the backend source (828 lines) was recovered via the Cloudflare `subinfo` API and lives only here: [`audit/cf-api/cityforge-edge-worker-source.js`](audit/cf-api/cityforge-edge-worker-source.js).
+- The published frontend snapshot (bundles) is preserved under [`artifacts/`](artifacts/README.md) with SHA-256 provenance.
 
-## ساختار
+## Repository layout
 ```
 cityforge/
-├── README.md                        ← همین فایل
+├── README.md                        ← this file
 ├── audit/
-│   ├── HISTORY-ARK-MONOPOLY.md      ← پروندهٔ اصلی: خط زمانی + یافته‌های F-CF1..14 و F-EDGE-1..13
+│   ├── HISTORY-ARC-MONOPOLY.md      ← master case file: timeline + findings F-CF1..14 and F-EDGE-1..13
+│   ├── VERIFICATION-RUN1-vs-RUN2.md ← formal cross-check between the two independent audit runs
+│   ├── archive/run1/                ← run-1 documents as received (verbatim copies, unmodified)
 │   └── cf-api/
-│       ├── AUDIT-REPORT-DIRECT.md   ← گزارش حسابرسی مستقیم Cloudflare API (۱۶ مرحله GET + تست زنده)
-│       ├── 01_verify.json … 16_audit_logs.json   ← شواهد خام API (دو اجرا، سایز یکسان)
-│       └── cityforge-edge-worker-source.js       ← سورس کامل ورکر بازیابی‌شده (828 خط)
+│       ├── AUDIT-REPORT-DIRECT.md   ← direct Cloudflare API audit report (16 GET steps + live test)
+│       ├── 01_verify.json … 16_audit_logs.json   ← raw API evidence (two runs, identical sizes)
+│       └── cityforge-edge-worker-source.js       ← recovered full worker source (828 lines)
 ├── artifacts/
-│   ├── README.md                    ← اصل و نسب + هش‌ها + فایل غایب (debug-collector)
-│   ├── root.html                    ← 368,243 B — شامل رانتایم Manus Previewer
-│   ├── assets/index-P14T8RX6.js     ← 793,128 B — باندل اصلی (React/Arc/multicall3)
+│   ├── README.md                    ← provenance + hashes + the missing file (debug-collector)
+│   ├── root.html                    ← 368,243 B — contains the full Manus Previewer runtime
+│   ├── assets/index-P14T8RX6.js     ← 793,128 B — main bundle (React/Arc/multicall3)
 │   ├── assets/index-Pjaa9_yt.css    ← 134,224 B
-│   ├── assets/ArcOwnerControl-6aTkiLY4.js ← 180,011 B — صفحهٔ owner-only
-│   └── headers-root.txt             ← هدرهای پاسخ روت
+│   ├── assets/ArcOwnerControl-6aTkiLY4.js ← 180,011 B — owner-only page
+│   └── headers-root.txt             ← root response headers
 └── tools/
-    └── cf_edge_audit.sh             ← اسکریپت بازتولید حسابرسی (توکن از env، فقط GET)
+    └── cf_edge_audit.sh             ← audit reproduction script (GET-only, token via env)
 ```
 
-## یافته‌های تعیین‌کننده (خلاصهٔ یک‌نگاهی)
-| # | یافته |
+## Key findings (one-glance summary)
+| # | Finding |
 |---|---|
-| 1 | **بک‌ند زنده است** — کل چرخهٔ بازی (session→room→roll→buy→AI) با curl پاس شد؛ claim قبلی «1101 = مرگ بک‌اند» ابطال شد (1101 فقط با بدنهٔ JSON خراب). |
-| 2 | **ریشهٔ خرابی UX:** CORS سخت‌کدشده روی origin مردهٔ Manus → فرانت workers.dev نمی‌تواند از مرورگر API خودش را صدا بزند؛ WebSocket هم 403. |
-| 3 | **جریان NFT claim** (winnerTicket با HMAC، ۱۰ دقیقه اعتبار) به بک‌اند حذف‌شدهٔ Manus وابسته است → مرده. |
-| 4 | تاس سروِر-اختیار با `crypto.getRandomValues` + rejection sampling (بدون `Math.random`)؛ نشست HMAC-SHA256 با مقایسهٔ constant-time. |
-| 5 | ورکر از 2026-08-22T20:19:48Z منجمد؛ R2 روی اکانت غیرفعال؛ بدون KV/D1/Queues/Cron — معماری خالص DO+SQLite. |
+| 1 | **The backend is alive** — the full gameplay loop (session → room → roll → buy → AI turn) passed via live curl; the earlier "1101 = dead backend" claim was refuted (1101 reproduces only with an empty/invalid JSON body). |
+| 2 | **Root cause of the broken UX:** CORS is hardcoded to the dead Manus origin → the workers.dev frontend cannot call its own API from the browser; WebSocket is 403 as well. |
+| 3 | **The NFT claim flow** (winnerTicket, HMAC-signed, 10-minute validity) depends on the deleted Manus backend → dead. |
+| 4 | Server-authoritative dice via `crypto.getRandomValues` with rejection sampling (no `Math.random`); HMAC-SHA256 sessions with constant-time comparison. |
+| 5 | Worker frozen since 2026-08-22T20:19:48Z; R2 disabled on the account; no KV/D1/Queues/Cron — a pure DO+SQLite architecture. |
 
-## بازتولید حسابرسی
+## Reproducing the audit
 ```bash
-export CF_TOKEN='<توکن با اسکوپ Workers Scripts:Read روی اکانت 0o0r7>'
-bash tools/cf_edge_audit.sh   # خروجی در audit/cf-api/*.json
+export CF_TOKEN='<token with Workers Scripts:Read scope on the 0o0r7 account>'
+bash tools/cf_edge_audit.sh   # output goes to audit/cf-api/*.json
 ```
-داکترین: فقط GET؛ توکن فقط در env؛ خطای اسکوپ → بدون retry؛ پس از اتمام، توکن rotate شود.
+Doctrine: GET-only; token passed via env only; scope errors (401/403) are logged without retry; rotate the token immediately after the run.
 
-## آنچه عمداً در این ریپو نیست
-- هر توکن/کوکی/secret (مقادیر secret توسط خود CF redact می‌شوند و هرگز استخراج نشدند).
-- فایل‌های `.env` پروژهٔ کاری و هر دادهٔ محرمانهٔ دیگر.
-- اسکرین‌شات‌های cf-01..05 (در ریست سندباکس پاک شدند؛ قابل بازتولید).
-- کد اپلیکیشن Candle Climber (ریپوی خودش را دارد).
+## Documentation policy (standing rules)
+1. **Language & tone:** all authored documentation in this repository is written in **English** with a clean technical tone. Raw evidence (API JSON responses, the recovered worker source, and as-received copies under `archive/`) is preserved verbatim and is exempt from authoring rules.
+2. **Naming:** the blockchain is spelled **ARC** (not "ARK"). The project is referred to as **ARC-Monopoly**. The ARC Testnet chainId is `5042002` (`0x4cef52`).
 
-## مجوز
-مستندات و شواهد، متعلق به پژوهش حسابرسی 0o0r7 است. سورس بازیابی‌شدهٔ ورکر کد مالک اکانت (`0o0r7.web3@gmail.com`) است و صرفاً به‌عنوان بک‌اپ شخصیِ همان مالک این‌جا نگهداری می‌شود.
+## Deliberately not included
+- Any token, cookie, or secret value (secret values are redacted by Cloudflare itself and were never extracted).
+- Workspace `.env` files and any other confidential data.
+- Screenshots cf-01..05 (lost in a sandbox reset; reproducible on demand).
+- The Candle Climber application code (it has its own repository).
+
+## License
+Documentation and evidence belong to the 0o0r7 audit research. The recovered worker source is code owned by the account owner (`0o0r7.web3@gmail.com`) and is kept here solely as that owner's private backup.

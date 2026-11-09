@@ -1,29 +1,29 @@
-# آرتیفکت‌های عمومی CityForge — snapshot
+# CityForge Public Artifacts — snapshot
 
-**تاریخ گرفتن:** 2026-11-09 (UTC ~17:24 بار اول، ~20:45 بازگیری این ریپو)
-**منبع:** `https://cityforge-edge.0o0r7-web3.workers.dev/` (دسترس عمومی، بدون توکن)
-**کاربرد:** شواهد دیپ‌دایو (F-CF2 تا F-CF12 پروندهٔ `../audit/HISTORY-ARK-MONOPOLY.md`) — پس از حذف پروژهٔ Manus، این فایل‌ها تنها نسخه‌های شناخته‌شدهٔ فرانت‌اند منتشرشده‌اند.
+**Captured:** 2026-11-09 (UTC ~17:24 first pass, ~20:45 this repository's re-acquisition)
+**Source:** `https://cityforge-edge.0o0r7-web3.workers.dev/` (public access, no token)
+**Purpose:** deep-dive evidence (F-CF2 through F-CF12 in `../audit/HISTORY-ARC-MONOPOLY.md`) — after the Manus project deletion, these files are the only known copies of the published frontend.
 
-## فایل‌ها و صحت‌سنجی (SHA-256)
+## Files and integrity (SHA-256)
 
-| فایل | سایز (بایت) | SHA-256 (۱۶ کاراکتر اول) |
+| File | Size (bytes) | SHA-256 (first 16) |
 |---|---|---|
 | `root.html` | 368,243 | `81586f6399f9465b` |
 | `assets/index-P14T8RX6.js` | 793,128 | `a98f17db51d88efd` |
 | `assets/index-Pjaa9_yt.css` | 134,224 | `8947efd669db608e` |
 | `assets/ArcOwnerControl-6aTkiLY4.js` | 180,011 | `39ef54e858aedb07` |
-| `headers-root.txt` | — | هدرهای پاسخ روت (تاریخ سرور، cf-ray، NEL) |
+| `headers-root.txt` | — | root response headers (server date, cf-ray, NEL) |
 
-هش کامل با `sha256sum` قابل بازتولید است؛ مقدارهای کامل در تاریخچهٔ commit ثبت شده‌اند.
+Full hashes are reproducible with `sha256sum`; complete values are recorded in the commit history.
 
-## یافته‌های کلیدی داخل این فایل‌ها
-- `root.html` — رانتایم Manus Previewer (~367KB اینلاین)، scaffold Manus.
-- `index-P14T8RX6.js` — باندل اصلی React 19.2.1؛ آرک‌چین: chainId `0x4cef52`، multicall3 `0xcA11bde05977b3631167028862bE2a173976CA11`، سه bytecode ERC-20 (798/1,410/11,188 hex)، نشت مسیر سورس `/home/ubuntu/cityforge-arc-game/client/src/...`؛ بدون آدرس قرارداد city-mark.
-- `index-Pjaa9_yt.css` — استایل Tailwind + shadcn/ui.
-- `ArcOwnerControl-6aTkiLY4.js` — صفحهٔ owner-only کنترل مالکانه (F-CF5).
+## Key findings inside these files
+- `root.html` — the Manus Previewer runtime (~367 KB inlined), Manus scaffold.
+- `index-P14T8RX6.js` — main React 19.2.1 bundle; ARC chain: chainId `0x4cef52`, canonical multicall3 `0xcA11bde05977b3631167028862bE2a173976CA11`, three ERC-20 bytecodes (798/1,410/11,188 hex chars), leaked source path `/home/ubuntu/cityforge-arc-game/client/src/...`; no city-mark contract address.
+- `index-Pjaa9_yt.css` — Tailwind + shadcn/ui styling.
+- `ArcOwnerControl-6aTkiLY4.js` — owner-only control page (F-CF5).
 
-## ⚠️ فایل غایب: `__manus___debug-collector.js`
-در اسنپ‌شات 17:24 UTC هنوز سرو می‌شد (25,168 B) اما در بازگیری ~20:45 و پس از آن، مسیرش **500/error 1101 قطعی** می‌دهد (F-EDGE-13). کپی‌ای از آن در این ریپو وجود ندارد؛ در صورت نیاز به بازیابی: کش‌های عمومی (archive.org / Google cache) یا هر کپی محلی از اسنپ‌شات قبلی.
+## ⚠️ Missing file: `__manus___debug-collector.js`
+In the 17:24 UTC snapshot it was still served (25,168 B), but from the ~20:45 re-acquisition onward its path returns a **deterministic 500/error 1101** (F-EDGE-13). No copy exists in this repository; if recovery is needed, use public caches (archive.org / Google cache) or any local copy from the earlier snapshot.
 
-## نکتهٔ اصل و نسب
-این فایل‌ها به‌صورت فقط-خواندنی از URL عمومی گرفته شده‌اند؛ هیچ تغییر روشن از 2026-08-22 در دیپلوی دیده نشده (سه refetch با سایز یکسان — F-CF14). بنابراین این اسنپ‌شوت معتبرِ «وضعیت منتشرشدهٔ پروژه» است.
+## Provenance note
+These files were fetched read-only from the public URL; no change has been observed in the deployment since 2026-08-22 (three refetches with identical sizes — F-CF14). This snapshot is therefore a valid capture of the project's published state.
