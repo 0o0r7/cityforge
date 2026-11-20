@@ -147,6 +147,7 @@ h1 { margin: 0; font-size: 20px; letter-spacing: 0.2px; }
 .player.out { opacity: 0.45; text-decoration: line-through; }
 .player .who { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .player .bal { font-variant-numeric: tabular-nums; color: var(--amber); }
+.player .bal small { color: var(--muted); font-size: 10px; font-weight: 400; }
 
 .actions { display: flex; gap: 8px; }
 
