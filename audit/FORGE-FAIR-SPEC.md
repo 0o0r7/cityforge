@@ -7,7 +7,8 @@ Written 2026-11-20 20:50 UTC. Deadline 2026-11-21 22:00 UTC → **≈ 25 h remai
 
 The deliverable must be a **working product**, not a demo or a mockup. That rules out a recorded fixture
 standing in for a live path, a "proof" that was generated once and replayed, and a payout that is printed on
-screen instead of signed on-chain. Every claim below must be reproducible by a third party from public data.
+screen instead of attested by a finalized verification. Every claim below must be reproducible by a third party
+from public data.
 
 It equally rules out the full game: a 40-tile board with trading, mortgages and auctions cannot be built,
 tested and deployed in 25 hours without at least one of those components degenerating into a mockup. So the
@@ -29,16 +30,19 @@ publishing its seed or strategy.
 - A playable board, 2–4 players, one browser client.
 - Committed-seed dice: commit at room creation, reveal at settlement. A roll cannot be re-rolled after the
   board is visible.
-- Real USDC movement on Arc Testnet (chainId 5042002, USDC as native gas): entry stake in, pot out.
+- A **closed virtual-credit economy**: every player starts with the same credit balance, credits are zero-sum,
+  and no faucet, wallet or funded token is required to play.
 - A Groth16 proof per settlement, verified on **zkVerify mainnet through Kurier** and gated on `Finalized`
-  before the transfer is signed.
+  before any credit is moved or recorded.
+- Optional on-chain mirror: the same settlement replayed as a USDC transfer on Arc Testnet, only if a faucet
+  cooperates. Its absence weakens nothing — see §6.
 - A public ledger: every settlement with its commitment, its payouts, and its finalized verification reference,
   replayable by anyone.
 
 ### Out (and said so on the submission page)
 - Trading, auctions, mortgages, houses/hotels, chance-card decks beyond a fixed effect table.
 - Multi-round tournaments, matchmaking, ratings.
-- Any real-money use. Arc Testnet only; stakes are testnet USDC.
+- Any real-money use. Credits are not a token, are not redeemable and are not transferable outside a game.
 
 ## 3. Game rules (the whole rulebook)
 
@@ -46,13 +50,18 @@ publishing its seed or strategy.
   (skip one turn). Fixed rent table — rent depends only on tile id, never on negotiation.
 - 2d6 from the committed seed stream: `roll_i = 1 + (keccak(seed ‖ i) mod 6)` per die, rejection-sampled to
   avoid modulo bias (the CityForge bundle already does this — reuse the approach).
-- Entry stake `S` per player, paid into the pot at join. Pot = `n · S`.
+- Entry stake `S` credits per player, escrowed from the starting balance at join. Pot = `n · S`. The total
+  credit supply never changes: credits only move between players, they are never minted or burned.
 - Landing on an unowned property: buy for its price out of the player's balance into the pot. Owned: pay rent to
   the owner from balance.
 - Elimination: a player whose balance cannot cover a due payment is eliminated; their remaining balance is
   returned and their properties become unowned.
 - End: one survivor, or 24 rounds elapsed → ranking by final balance.
 - Settlement: a single payout vector `p[]` over all players, `sum(p) = pot`.
+
+One honest weakness of a closed credit economy: a player who controls both sides of a game can farm a global
+ranking. Mitigation, stated rather than hidden — the ledger ranks nothing globally; it attests per-game
+settlements, and any future ranking must count distinct opponents, not raw winnings.
 
 ## 4. The proof
 
@@ -62,7 +71,7 @@ Two layers, and the split is deliberate — it is what makes this buildable in t
 `(seed, joins, actions)` and recompute the entire game and the payout vector. This proves *the rules were
 followed*. No circuit needed.
 
-**Layer 2 — `settle.circom`.** Proves the money moved exactly as committed, in one shot:
+**Layer 2 — `settle.circom`.** Proves the credits moved exactly as committed, in one shot:
 
 | | Signal |
 |---|---|
@@ -87,7 +96,7 @@ stated on the ledger page rather than blurred into one "fully verified" claim.
 
 ```
 create room  → commit seed, open joins
-join         → verify stake tx on Arc, add player
+join         → escrow stake credits, add player
 turn         → derive roll, apply rules, append action log (no money moves)
 settle       → build payout vector → prove → Kurier submit → poll to Finalized
              → sign Arc transfer → publish ledger entry
@@ -98,12 +107,27 @@ settle       → build payout vector → prove → Kurier submit → poll to Fin
 - Idempotency: one settlement per `settlementNonce`; the ledger row is the lock, not process memory.
 - Every state transition is persisted; the agent restarts mid-game without corrupting a pot.
 
-## 6. Arc integration
+## 6. Settlement anchor — why no faucet is needed
+
+A virtual credit is a number in a database, so on its own it proves nothing: the operator can rewrite it. The
+proof only becomes load-bearing when the committed vector is anchored somewhere the operator cannot edit.
+**zkVerify is that anchor.** Each settlement's commitment is submitted through Kurier and reaches `Finalized`,
+which leaves an immutable, public, timestamped record that *this* payout vector existed and satisfied the
+constraints *before* a single credit was credited. No gas, no token, no wallet.
+
+Tamper-evidence across games comes from a hash chain: each settlement's commitment includes the previous
+settlement's hash, so altering one historical entry invalidates every later verification reference. The ledger
+is append-only by construction, not by policy.
+
+### 6.1 Optional: Arc Testnet mirror
 
 - `chainId 5042002`, RPC `rpc.testnet.arc.network`, explorer `arcscan` (values recovered from
   `artifacts/assets/ArcOwnerControl-*.js` in this repository).
 - USDC is the **native gas token**; there is no ERC-20 hop. Balances and transfers are plain value transfers.
-- Deposit detection by tx hash + receipt; never by client claim.
+- Built only after the credit path is finished and only if the faucet works. It is a demonstration of the same
+  signed settlement against real chain state, labelled as a mirror — never a substitute for the anchor.
+- Other testnet tokens (Sepolia ETH, zkVerify tokens) are deliberately **not** used: they add gas and faucet
+  friction and buy nothing that a finalized verification reference does not already provide.
 
 ## 6.1 Hosting — Azure for Students
 
@@ -123,7 +147,7 @@ DigitalOcean is no longer part of the GitHub Student Pack, so the earlier sugges
 
 - `POST /rooms` · `POST /rooms/:id/join` · `POST /rooms/:id/roll` · `POST /rooms/:id/buy` · `POST /rooms/:id/settle`
 - `GET /rooms/:id` — state, seed commitment, action log
-- `GET /ledger` — settlements with `potCommitment`, `payoutsHash`, `jobId`, zkVerify tx, block, Arc tx, seed
+- `GET /ledger` — settlements with `prevHash`, `potCommitment`, `payoutsHash`, `jobId`, zkVerify tx, block, seed
 - `GET /health`
 - Web client: the board, the turn loop, and a **Verify** button that re-runs the game from the revealed seed in
   the browser and diffs the result against the ledger's payout vector.
@@ -139,14 +163,14 @@ DigitalOcean is no longer part of the GitHub Student Pack, so the earlier sugges
 | H13–15 | Deploy; one full game with two real wallets; one finalized reference end to end |
 | H15–18 | README, 3-minute video, public thread |
 | H18–20 | Wildcard form + Creator Track entry |
-| H20–25 | Buffer — expect the circuit and the faucet to eat it |
+| H20–25 | Buffer — expect the circuit to eat it |
 
 ## 9. Risks, with the fallback for each
 
 | Risk | Likelihood | Fallback |
 |---|---|---|
 | circom toolchain / ptau friction in the sandbox | Medium | Prove a reduced statement (conservation + nonce only) — still a real zkVerify proof |
-| Arc faucet or RPC unusable | Medium | Settlement proof stays real; transfer moves to a documented testnet account with a signed-but-unsent tx shown as such, **and the limitation is stated, not hidden** |
+| Arc faucet or RPC unusable | Medium | Costs only the optional mirror (§6.1). The product, the proof and the anchor are unaffected — this is why the economy is credit-based |
 | Kurier key / rate limits | Low | Queue settlements; ledger shows `PENDING_VERIFICATION` honestly |
 | Proving too slow for the UI | Low | Prove server-side, stream status to the client |
 | Host under-provisioned | Low | A ~5k-constraint Groth16 proof needs ~200–300 MB and 1–3 s in Node, so a 1 GB container is enough — no GPU, no large instance |
@@ -158,7 +182,8 @@ The build is mine. These cannot be delegated and are on the critical path:
 
 1. Register at `/register` (X or wallet), connect GitHub and the prize wallet.
 2. Create the Kurier API key.
-3. Provide a funded Arc Testnet wallet (faucet) for the pot, plus a second wallet to play against.
+3. Nothing for the economy — credits need no wallet, no faucet and no funding. A funded Arc wallet is needed
+   only for the optional mirror in §6.1.
 4. A host for the public endpoint and the prover.
 5. Record the 3-minute video and post the public thread.
 
