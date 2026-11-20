@@ -7,9 +7,15 @@ This repository is the **official backup of the CityForge technical validation a
 - The only known copy of the backend source (828 lines) was recovered via the Cloudflare `subinfo` API and lives only here: [`audit/cf-api/cityforge-edge-worker-source.js`](audit/cf-api/cityforge-edge-worker-source.js).
 - The published frontend snapshot (bundles) is preserved under [`artifacts/`](artifacts/README.md) with SHA-256 provenance.
 
+## The app: Forge Fair
+`app/` holds a working game built on the lessons of this audit: a 16-tile property game
+whose settlement is replayed from a committed seed and proved with Groth16, then anchored
+on zkVerify. See [`app/README.md`](app/README.md) for screens, API and tests.
+
 ## Repository layout
 ```
 cityforge/
+├── app/                             ← Forge Fair (server + static front end, npm test)
 ├── README.md                        ← this file
 ├── audit/
 │   ├── HISTORY-ARC-MONOPOLY.md      ← master case file: timeline + findings F-CF1..14 and F-EDGE-1..13

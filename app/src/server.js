@@ -10,6 +10,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { runBot } from './demo.js';
 import { TILES } from './engine/board.js';
 import { apply, createGame, replay, settle } from './engine/game.js';
 import { CIRCUIT, proveSettlement, verificationKey } from './zk/prove.js';
@@ -190,11 +191,26 @@ async function route(req, res, url) {
     return send(res, 200, { tiles: TILES });
   }
 
+  if (req.method === 'GET' && url.pathname === '/api/circuit') {
+    return send(res, 200, { circuit: CIRCUIT });
+  }
+
   if (req.method === 'POST' && url.pathname === '/api/rooms') {
     const body = await readJson(req);
     const room = createRoom(body.players);
     prune();
     return send(res, 201, publicView(room));
+  }
+
+  // A bot match is a real room played to the end; the client replays the frames and can
+  // settle it through the same endpoint as a human game.
+  if (req.method === 'POST' && url.pathname === '/api/demo') {
+    const body = await readJson(req);
+    const room = createRoom(body.players ?? 3);
+    const names = Array.isArray(body.names) ? body.names.map((name) => String(name).slice(0, 12)) : [];
+    const { frames } = runBot(room, names);
+    prune();
+    return send(res, 201, { id: room.id, players: room.playerIds, frames });
   }
 
   if (parts[0] === 'api' && parts[1] === 'rooms' && parts[2]) {
