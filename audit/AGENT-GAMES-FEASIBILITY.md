@@ -14,17 +14,32 @@ Agent Games is run by zkVerify (built by Horizen Labs). 400,000 VFY total, **100
 | Track | Format | Scored how | Status on 2026-11-20 |
 |---|---|---|---|
 | Proof Gatekeeper | 8 daily rounds, 8 tasks/day, 60 s deadline per task | Automated, cumulative across rounds | **Effectively over** — rounds 13–20 Nov; round 08 closes 20:30 UTC today |
-| Steal the VFY | Swiss 7 rounds → top-16 knockout, 20 turns/match | Automated, head-to-head | **Over** — schedule 13–17 Nov |
+| Steal the VFY | Swiss 7 rounds → top-16 knockout, 20 turns/match | Automated, head-to-head | **Live, running late** — page prints schedule 13–17 Nov, live block shows R5 of 7 as the current round |
 | Wildcard | Build any useful agent, on-chain or off-chain | **Manual panel review**, 23 Nov – 1 Dec | **Open — the only winnable track** |
 | Creator Track | Public thread / video / article with receipts | Manual review | **Open** — second pool, same build can be documented |
 
 Judgement window 23 Nov – 1 Dec 2026; winners announced 5 Dec 2026.
 
 ### 1.1 Why the two live-scored tracks are out of reach
-Proof Gatekeeper standings are cumulative. The public leaderboard shows 507 agents entered, with the leader at
-676.9 points. A newcomer can only join the 21 Nov compensatory round (8 tasks), whose ceiling is roughly
-8 × (+12 + reliability) ≈ 100 points — far below the current top three (676.9 / 667.4 / 666.3). Steal the VFY
-finished its Swiss stage and knockout bracket before today. Neither can be won from here.
+
+**Proof Gatekeeper** standings are cumulative. `/api/leaderboard` reports 507 agents, 477 of them entered here,
+with 681.9 / 672.4 / 671.3 at the top. A newcomer can only join the 21 Nov make-up window (8 tasks, ceiling
+roughly 8 × (+12 + reliability) ≈ 100 points) — far below the top three. Not winnable.
+
+**Steal the VFY — verified 2026-11-20, corrected.** The page still prints "Schedule 13 Nov – 17 Nov 2026", but
+the live tournament block on that same page reads **53 agents paired · R5 current round · 61 matches**, and the
+leaderboard API reports 67 agents entered, 28 of them scoring above zero. Agent records confirm ongoing play
+(`pidz-stealer`: Swiss rounds 4 and 5; `pecker`: rounds 1–5). The rules page allows mid-tournament entry —
+"register mid-tournament to join from the next Swiss round, until the final round is paired" — and the
+organisers' X account was still posting "Submit now" for this track on **2026-11-18 09:17 UTC**, a day after the
+printed schedule end. The platform announcement feed carries no closing notice for it. **So the track is behind
+schedule, and registration is not formally closed.**
+
+It is still not a winnable target. Seven Swiss rounds are planned and R5 is current, so a new agent joins at R6
+and can play at most two matches. Best case, two wins: 2 × (+18 + reliability ≤ +2) = **40 points**. Current
+standings: 1st 73 (`pecker`), 2nd 64 (`VK-SENTINEL`), 3rd 62 (`MP-gatekeeper-01`). Top-16 knockout qualification
+and any prize are out of reach, and no announcement promises rounds beyond seven. Entry also demands the most
+expensive build in the event — a committed policy circuit plus per-turn Groth16 proofs — for a guaranteed zero.
 
 ### 1.2 What Wildcard actually requires
 - **Agent link** — a public repository, demo, or write-up showing the agent.
@@ -112,6 +127,9 @@ Fallback if the custom circuit overruns: reuse the published, mainnet-registered
 - https://agentgames.zkverify.io/guide — registration flow
 - https://agentgames.zkverify.io/leaderboard — 507 agents, top scores
 - https://agentgames.zkverify.io/api/circuit-info — vk hashes and artifact URLs
+- https://agentgames.zkverify.io/api/leaderboard — per-track scores and event membership (2026-11-20)
+- https://agentgames.zkverify.io/api/notifications — platform announcement feed, 6 items (2026-11-20)
+- https://agentgames.zkverify.io/agents/&lt;id&gt; — per-agent round and match records
 - https://docs.zkverify.io/ — supported proof systems, Kurier guide, quickstart
 - https://x.com/ZKVProtocol — organisers' channel
 - github.com/zkVerify — `zkverifyjs`, `zkverifyjs-starter-template`, `zkverify-evm-dapp-example`, `awesome-zkVerify`
