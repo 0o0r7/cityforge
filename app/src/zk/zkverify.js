@@ -9,7 +9,9 @@
 
 const DEFAULT_URL = 'https://api.kurier.xyz/api/v1';
 const PROOF_OPTIONS = { library: 'snarkjs', curve: 'bn128' };
-const TIMEOUT_MS = 15000;
+const TIMEOUT_MS = 20000;
+// Registering a key is an on-chain step and takes ~20-30s the first time.
+const REGISTER_TIMEOUT_MS = 90000;
 const FINAL = new Set(['Finalized', 'Aggregated']);
 const PENDING = new Set(['Queued', 'Valid', 'Submitted', 'IncludedInBlock', 'AggregationPending']);
 
@@ -29,10 +31,10 @@ export function attestationConfig() {
   return { configured: true, network: /testnet/i.test(cfg.base) ? 'testnet' : 'mainnet' };
 }
 
-async function request(cfg, path, init) {
+async function request(cfg, path, init, timeout = TIMEOUT_MS) {
   const response = await fetch(cfg.base + path, {
     ...init,
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeout),
     headers: { 'content-type': 'application/json', ...(init.headers || {}) },
   });
   const body = await response.json().catch(() => ({}));
@@ -44,15 +46,51 @@ async function request(cfg, path, init) {
 }
 
 let vkHash = null;
+let registering = null;
 
 async function registerKey(cfg, vk) {
-  const body = await request(cfg, `/register-vk/${cfg.key}`, {
-    method: 'POST',
-    body: JSON.stringify({ proofType: 'groth16', proofOptions: PROOF_OPTIONS, vk }),
-  });
+  const body = await request(
+    cfg,
+    `/register-vk/${cfg.key}`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ proofType: 'groth16', proofOptions: PROOF_OPTIONS, vk }),
+    },
+    REGISTER_TIMEOUT_MS,
+  );
   const hash = body.vkHash || body.meta?.vkHash;
   if (!hash) throw new Error('Kurier did not return a vkHash for the settlement key');
   return hash;
+}
+
+/** Register once per process; concurrent settlements await the same registration. */
+function ensureKey(cfg, vk) {
+  if (vkHash) return Promise.resolve(vkHash);
+  if (!registering) {
+    registering = registerKey(cfg, vk)
+      .then((hash) => {
+        vkHash = hash;
+        return hash;
+      })
+      .finally(() => {
+        registering = null;
+      });
+  }
+  return registering;
+}
+
+/**
+ * Register the settlement key ahead of the first settlement, so the one-time on-chain
+ * registration (~20s) does not sit inside a settlement request.
+ */
+export async function prewarm(vk) {
+  const cfg = config();
+  if (!cfg) return null;
+  try {
+    return await ensureKey(cfg, vk);
+  } catch {
+    return null;
+  }
 }
 
 /** Submit one settlement proof. Returns immediately with the job id; status is polled. */
@@ -60,7 +98,7 @@ export async function submitAttestation({ proof, publicSignals, vk }) {
   const cfg = config();
   if (!cfg) return { status: 'not-configured', reason: NOT_CONFIGURED };
   try {
-    if (!vkHash) vkHash = await registerKey(cfg, vk);
+    const hash = await ensureKey(cfg, vk);
     const submitted = await request(cfg, `/submit-proof/${cfg.key}`, {
       method: 'POST',
       body: JSON.stringify({
@@ -70,7 +108,7 @@ export async function submitAttestation({ proof, publicSignals, vk }) {
         proofData: { proof, publicSignals, vk: vkHash },
       }),
     });
-    const base = { jobId: submitted.jobId ?? null, vkHash, network: attestationConfig().network };
+    const base = { jobId: submitted.jobId ?? null, vkHash: hash, network: attestationConfig().network };
     if (submitted.optimisticVerify !== 'success') {
       return { ...base, status: 'failed', reason: 'Kurier rejected the proof at submission' };
     }

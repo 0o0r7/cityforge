@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { TILES } from './engine/board.js';
 import { apply, createGame, replay, settle } from './engine/game.js';
 import { CIRCUIT, proveSettlement, verificationKey } from './zk/prove.js';
-import { attestationStatus, submitAttestation } from './zk/zkverify.js';
+import { attestationStatus, prewarm, submitAttestation } from './zk/zkverify.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(HERE, '..', 'public');
@@ -248,5 +248,10 @@ export const server = createServer((req, res) => {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`forge fair listening on http://0.0.0.0:${PORT}`);
+    // One-time on-chain key registration, in the background: a settlement should not
+    // wait ~20s for it the first time it runs.
+    verificationKey()
+      .then((vk) => prewarm(vk))
+      .catch(() => {});
   });
 }
