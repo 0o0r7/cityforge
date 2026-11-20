@@ -135,6 +135,7 @@ settle       → build payout vector → prove → Kurier submit → poll to Fin
 | Arc faucet or RPC unusable | Medium | Settlement proof stays real; transfer moves to a documented testnet account with a signed-but-unsent tx shown as such, **and the limitation is stated, not hidden** |
 | Kurier key / rate limits | Low | Queue settlements; ledger shows `PENDING_VERIFICATION` honestly |
 | Proving too slow for the UI | Low | Prove server-side, stream status to the client |
+| Host under-provisioned | Low | A ~5k-constraint Groth16 proof needs ~200–300 MB and 1–3 s in Node, so a 1 GB container is enough — no GPU, no large instance |
 | Board UI eats the schedule | High | Ship the turn loop as a functional table view first; polish only if H13 is met |
 
 ## 10. Division of labour
