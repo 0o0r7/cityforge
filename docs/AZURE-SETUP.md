@@ -1,86 +1,95 @@
-# Azure setup — service principal for Forge Fair
+# Azure setup — deployment identity for Forge Fair
 
-Goal: give the build a deployment identity it can use to create and update one App Service, without you
-handing over your own account. You do four steps; the whole thing takes about six minutes.
+Goal: give the build a deployment identity it can use to create and update one App Service,
+without handing over your own account. Everything below runs in the terminal — no portal clicking.
 
-**Never paste the secret value into chat.** It goes into the Secrets panel only.
+**Never paste a credential into chat.** Values go into the Secrets panel only.
 
 ---
 
-## Step 1 — Create the app registration
+## Step 1 — Open Azure Cloud Shell
 
-Open: https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade
+Open <https://shell.azure.com> (or the `>_` icon in the portal). Pick **Bash** if asked.
+It is already signed in as you and already has `az` and `jq`.
 
-1. **New registration**
-2. Name: `forge-fair-deploy`
-3. Supported account types: *Accounts in this organizational directory only (single tenant)*
-4. **Register**
+Check the subscription you want to bill:
 
-On the overview page, copy these two values:
-
-| Value | Where | Key name |
-|---|---|---|
-| Application (client) ID | Overview → *Application (client) ID* | `AZURE_CLIENT_ID` |
-| Directory (tenant) ID | Overview → *Directory (tenant) ID* | `AZURE_TENANT_ID` |
-
-## Step 2 — Create the client secret
-
-In the same app registration: **Certificates & secrets → Client secrets → New client secret**
-
-- Description: `forge-fair-deploy`
-- Expires: 24 months (anything past 1 Dec works)
-
-Copy the **Value** column immediately — it is shown once. The *Secret ID* is not the secret.
-
-| Value | Key name |
-|---|---|
-| Secret **Value** | `AZURE_CLIENT_SECRET` |
-
-## Step 3 — Give it permission to deploy
-
-Open: https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade
-
-1. Open your subscription
-2. **Access control (IAM) → Add → Add role assignment**
-3. Role: **Contributor**
-4. Assign access to: *User, group, or service principal*
-5. Search `forge-fair-deploy`, select it, **Review + assign**
-
-**If that page refuses the assignment** (student subscriptions sometimes restrict subscription-level IAM),
-do this instead — same effect, narrower:
-
-1. Open https://portal.azure.com/#view/HubsExtension/BrowseResourceGroups → **Create**
-2. Resource group: `forge-fair-rg`, region: **West Europe**
-3. Open `forge-fair-rg` → **Access control (IAM)** → add **Contributor** for `forge-fair-deploy`
-
-Either way, tell me which one you used.
-
-## Step 4 — Hand over the three values
-
-Open the Secrets panel (Base44 → Secrets) and add:
-
-```
-AZURE_TENANT_ID      = <Directory (tenant) ID>
-AZURE_CLIENT_ID      = <Application (client) ID>
-AZURE_CLIENT_SECRET  = <secret Value>
+```bash
+az account show --query '{name:name, id:id, tenant:tenantId}' -o table
 ```
 
-Also add this one when you have it — it is the second hard dependency:
+If that is not the right one: `az account set --subscription "<name or id>"`.
+
+## Step 2 — One command that prints the four values
+
+```bash
+SUB=$(az account show --query id -o tsv)
+az ad sp create-for-rbac --name forge-fair-deploy --role Contributor \
+    --scopes /subscriptions/$SUB -o json \
+  | jq --arg s "$SUB" '{AZURE_CLIENT_ID:.appId, AZURE_CLIENT_SECRET:.password,
+                        AZURE_TENANT_ID:.tenant, AZURE_SUBSCRIPTION_ID:$s}'
+```
+
+The output is exactly what the Secrets panel asks for:
+
+```json
+{
+  "AZURE_CLIENT_ID": "00000000-0000-0000-0000-000000000000",
+  "AZURE_CLIENT_SECRET": "<long random string>",
+  "AZURE_TENANT_ID": "00000000-0000-0000-0000-000000000000",
+  "AZURE_SUBSCRIPTION_ID": "00000000-0000-0000-0000-000000000000"
+}
+```
+
+Paste each value into the matching key in the Secrets panel. The client secret is shown
+once — it cannot be read back later; if you lose it, run
+`az ad sp credential reset --name forge-fair-deploy` and paste the new `password`.
+
+This identity stays valid until you delete it, so redeploys need nothing from you.
+
+### If it fails with a permission error
+
+`Insufficient privileges to complete the operation` means your account may not create
+service principals or subscription-level role assignments (common on student subscriptions).
+Two things still work:
+
+- **Narrower scope** — create the resource group first, then grant on it:
+  ```bash
+  az group create --name forge-fair-rg --location westeurope
+  az ad sp create-for-rbac --name forge-fair-deploy --role Contributor \
+      --scopes /subscriptions/$(az account show --query id -o tsv)/resourceGroups/forge-fair-rg -o json \
+    | jq --arg s "$(az account show --query id -o tsv)" \
+        '{AZURE_CLIENT_ID:.appId, AZURE_CLIENT_SECRET:.password, AZURE_TENANT_ID:.tenant, AZURE_SUBSCRIPTION_ID:$s}'
+  ```
+- **Short-lived token fallback** — no service principal at all:
+  ```bash
+  az account get-access-token --resource https://management.azure.com --query accessToken -o tsv
+  ```
+  Paste it as `AZURE_ACCESS_TOKEN` plus the `id` and `tenantId` from Step 1. It expires in
+  about an hour, so it only covers a single deploy pass and must be re-issued afterwards.
+
+## Step 3 — Optional, for the settlement proof anchor
+
+If the settlement proof is anchored through zkVerify Kurier, add its key as well:
 
 ```
-KURIER_API_KEY       = <from the zkVerify Kurier dashboard>
+KURIER_API_KEY = <from the zkVerify Kurier dashboard>
 ```
+
+Without it the app still plays and settles locally; only the external anchor is skipped.
 
 ---
 
 ## What happens next
 
-I create the App Service (Linux, B1, always-on), deploy the container, and verify the public HTTPS endpoint
-answers. From then on every push redeploys — no manual step for you.
+The build creates a resource group, a Linux App Service plan (B1, always-on) and one Web App,
+deploys the server, and verifies the public HTTPS endpoint answers. Redeploys reuse the same
+identity.
 
 ## If something goes wrong
 
-- **"Insufficient privileges to complete the operation"** → use the resource-group fallback in Step 3.
-- **Secret shows as "Value: hidden"** → create a new secret; the value cannot be retrieved twice.
-- **Subscription not listed** → the student subscription may need to be re-activated at
-  https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade; nothing here can work around it.
+- **"Insufficient privileges to complete the operation"** → use one of the fallbacks in Step 2.
+- **`Secret shows as hidden`** → the value is write-only; reset the credential and paste again.
+- **Subscription not listed** → the student subscription may need re-activation at
+  <https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade>;
+  nothing in the build can work around that.
