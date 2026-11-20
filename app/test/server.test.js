@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 
 import { server } from '../src/server.js';
 
+// Keep the settlement tests offline: no Kurier key, so anchoring reports itself unconfigured.
+delete process.env.KURIER_API_KEY;
+
 let base;
 
 test.before(async () => {
@@ -57,6 +60,16 @@ test('a room plays to settlement and replays to the same state', async () => {
   assert.equal(settled.body.replay.ok, true, 'replay must reproduce the final state');
   assert.equal(settled.body.seed.length, 32);
   assert.equal(settled.body.payouts[settled.body.winnerIdx], settled.body.pot);
+
+  assert.equal(settled.body.zk.localVerify, true, 'the settlement proof must verify locally');
+  assert.equal(settled.body.zk.circuit.name, 'settle.circom');
+  assert.equal(settled.body.zk.signals.pot, String(settled.body.pot));
+  assert.equal(settled.body.zk.signals.winnerIdx, String(settled.body.winnerIdx));
+  assert.equal(settled.body.zk.attestation.status, 'not-configured');
+
+  const attestation = await call(`/api/rooms/${room.id}/attestation`);
+  assert.equal(attestation.status, 200);
+  assert.equal(attestation.body.status, 'not-configured');
 });
 
 test('rejects an action on a finished room and an unknown room', async () => {
