@@ -78,15 +78,17 @@ followed*. No circuit needed.
 | public | `potCommitment`, `payoutsHash`, `pot`, `cap`, `settlementNonce`, `winnerIdx` |
 | private | `payouts[4]`, `balances[4]`, `salts[4]` |
 
-Constraints:
-1. `Poseidon(payouts, salts) == payoutsHash` — the vector is the one that was committed before the transfer.
+Constraints (implemented in `app/circuits/settle.circom`, **built and tested**):
+1. `Poseidon(payouts, salts, nonce) == payoutsHash` — the vector is the one committed before the settlement.
 2. `Σ payouts == pot` — no hidden rake, nothing withheld.
 3. `payouts[i] ≤ cap` — no payout above the committed ceiling.
-4. `balances[winnerIdx] ≥ balances[j]` for all `j` — the winner is the true argmax, not the operator's pick.
-5. `settlementNonce` is bound into `payoutsHash` — a settled vector cannot be replayed for a second transfer.
+4. The player at `winnerIdx` receives the **whole** pot.
+5. `balances[winnerIdx] ≥ balances[j]` for all `j` — the winner is the true argmax, not the operator's pick.
+6. The nonce is folded into both commitments — a settled vector cannot be replayed for a second settlement.
 
-Roughly 5k constraints: proving takes seconds, verification is cheap. This is a real claim a player cares
-about, expressed in a circuit small enough to finish today.
+Measured: **3312 constraints, proof in 337 ms**, and four tampering attempts (hidden rake, wrong winner, cap
+breach, inflated pot) are each rejected at witness generation. Build notes and the ptau caveat are in
+`app/circuits/README.md`.
 
 **Honest limit:** the circuit does not re-run the board in zero knowledge. It proves *conservation, cap,
 true-winner and single-use* against a committed vector; the rules themselves are covered by replay. Both are
