@@ -3,54 +3,60 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Forge Fair — provable settlement</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <title>Forge Fair — a board game you can prove</title>
+    <meta
+      name="description"
+      content="Forge Fair is a 16-tile board game for 2–4 seats. Every payout is replayed from a committed seed and proved with Groth16, then anchored on zkVerify."
+    />
+    <meta name="theme-color" content="#0b0908" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23ff9f45'/%3E%3Ctext x='32' y='43' font-family='system-ui,sans-serif' font-size='26' font-weight='800' text-anchor='middle' fill='%231a1207'%3EFF%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/css/tokens.css" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/game.css" />
+    <link rel="stylesheet" href="/css/views.css" />
   </head>
   <body>
-    <header class="top">
-      <div class="brand">
-        <span class="mark">FF</span>
-        <div>
-          <h1>Forge Fair</h1>
-          <p class="sub">Sixteen tiles, a committed seed, one provable payout.</p>
-        </div>
-      </div>
-      <div class="commit">
-        <span class="label">Seed commitment</span>
-        <code id="commitment">—</code>
+    <a class="skip-link" href="#view">Skip to content</a>
+
+    <header class="site-head">
+      <a class="brand" href="#/" aria-label="Forge Fair — home">
+        <span class="mark" aria-hidden="true">FF</span>
+        <span class="brand-copy">
+          <strong>Forge Fair</strong>
+          <small>Provable settlement</small>
+        </span>
+      </a>
+
+      <nav class="site-nav" aria-label="Main">
+        <a href="#/play" data-nav="play">Play</a>
+        <a href="#/watch" data-nav="watch">Watch a bot</a>
+        <a href="#/guide" data-nav="guide">Rules</a>
+        <a href="#/proof" data-nav="proof">The proof</a>
+      </nav>
+
+      <div class="head-tools">
+        <button class="icon-btn" id="sound-toggle" type="button" aria-pressed="true" title="Sound on">
+          <span aria-hidden="true">♪</span><span class="sr-only">Toggle sound</span>
+        </button>
+        <a class="btn primary sm" href="#/play">Deal in</a>
       </div>
     </header>
 
-    <main class="layout">
-      <section class="board" id="board" aria-label="Board"></section>
+    <main id="view" class="view" tabindex="-1"></main>
 
-      <aside class="panel">
-        <div class="row">
-          <div class="stat"><span class="label">Round</span><b id="round">1</b></div>
-          <div class="stat"><span class="label">Pot</span><b id="pot">0</b></div>
-          <div class="stat"><span class="label">Turn</span><b id="turn">—</b></div>
-        </div>
+    <footer class="site-foot">
+      <span>Forge Fair · 16 tiles · 2–4 seats · 24 rounds</span>
+      <span class="foot-links">
+        <a href="#/guide">Rules</a>
+        <a href="#/proof">How the proof works</a>
+      </span>
+    </footer>
 
-        <ul class="players" id="players"></ul>
-
-        <div class="actions">
-          <button id="roll" class="primary">Roll</button>
-          <button id="buy" class="ghost" hidden>Buy</button>
-          <button id="skip" class="ghost" hidden>Skip</button>
-        </div>
-        <p class="hint" id="hint">Stake 200 each. Last solvent player takes the pot.</p>
-
-        <div class="result" id="result" hidden></div>
-
-        <ol class="log" id="log" aria-label="Game log"></ol>
-
-        <div class="foot">
-          <button id="new" class="link">New game</button>
-          <span id="roomId" class="mono"></span>
-        </div>
-      </aside>
-    </main>
-
-    <script type="module" src="/app.js"></script>
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+    <script type="module" src="/js/app.js"></script>
   </body>
 </html>
