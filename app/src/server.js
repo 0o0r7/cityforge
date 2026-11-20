@@ -12,6 +12,8 @@ import { fileURLToPath } from 'node:url';
 
 import { TILES } from './engine/board.js';
 import { apply, createGame, replay, settle } from './engine/game.js';
+import { CIRCUIT, proveSettlement, verificationKey } from './zk/prove.js';
+import { attestationStatus, submitAttestation } from './zk/zkverify.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(HERE, '..', 'public');
@@ -56,17 +58,51 @@ function publicView(room) {
   };
 }
 
-function settlement(room) {
+/**
+ * One settlement, one proof. The witness (salts + nonce) is generated once and the result
+ * is cached on the room, so repeated settlement reads return the same proof instead of a
+ * second, differently nonced one.
+ */
+function settlementProof(room) {
+  if (!room.proof) {
+    room.proof = (async () => {
+      const outcome = settle(room.state);
+      const proved = await proveSettlement(outcome);
+      const attestation = await submitAttestation({
+        proof: proved.proof,
+        publicSignals: proved.publicSignals,
+        vk: await verificationKey(),
+      });
+      return { ...proved, attestation };
+    })().catch((error) => ({ error: error.message }));
+  }
+  return room.proof;
+}
+
+async function settlement(room) {
   const replayed = replay(room.seed, room.playerIds, room.actions);
   const ok =
     JSON.stringify(replayed.players) === JSON.stringify(room.state.players) &&
     replayed.pot === room.state.pot &&
     replayed.diceIndex === room.state.diceIndex;
+  const proof = await settlementProof(room);
+  const zk = proof.error
+    ? { circuit: CIRCUIT, error: proof.error }
+    : {
+        circuit: CIRCUIT,
+        proof: proof.proof,
+        publicSignals: proof.publicSignals,
+        signals: proof.signals,
+        proveMs: proof.proveMs,
+        localVerify: proof.verified,
+        attestation: proof.attestation,
+      };
   return {
     ...settle(room.state),
     seed: room.seed,
     commitment: room.state.seedCommitment,
     replay: { ok, actions: room.actions.length },
+    zk,
   };
 }
 
@@ -81,7 +117,15 @@ function createRoom(playerCount) {
     state = apply(state, action, seed);
     actions.push(action);
   }
-  const room = { id: randomUUID().replace(/-/g, ''), seed, playerIds, actions, state, seen: Date.now() };
+  const room = {
+    id: randomUUID().replace(/-/g, ''),
+    seed,
+    playerIds,
+    actions,
+    state,
+    proof: null,
+    seen: Date.now(),
+  };
   rooms.set(room.id, room);
   return room;
 }
@@ -175,7 +219,15 @@ async function route(req, res, url) {
       if (room.state.status !== 'settled') {
         return send(res, 409, { error: 'game has not finished yet' });
       }
-      return send(res, 200, settlement(room));
+      return send(res, 200, await settlement(room));
+    }
+
+    if (req.method === 'GET' && parts[3] === 'attestation' && parts.length === 4) {
+      const proof = await settlementProof(room);
+      if (proof.error) return send(res, 500, { error: proof.error });
+      if (!proof.attestation?.jobId) return send(res, 200, proof.attestation);
+      proof.attestation = await attestationStatus(proof.attestation.jobId);
+      return send(res, 200, proof.attestation);
     }
 
     return send(res, 404, { error: 'unknown route' });

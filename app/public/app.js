@@ -185,6 +185,70 @@ function describe(entry) {
   }
 }
 
+const short = (value, size = 14) =>
+  value ? `${String(value).slice(0, size)}…${String(value).slice(-6)}` : '—';
+
+function attestationLine(attestation) {
+  const state = attestation?.status ?? 'not-configured';
+  const tag = `<span class="label">zkVerify</span>`;
+  switch (state) {
+    case 'finalized':
+      return `${tag} <span class="badge ok">finalized</span>
+        <code>tx ${short(attestation.txHash)}</code>`;
+    case 'pending':
+    case 'submitted':
+      return `${tag} <span class="badge">${attestation.jobStatus ?? 'submitted'}</span>
+        <code>job ${short(attestation.jobId, 10)}</code>`;
+    case 'failed':
+    case 'error':
+      return `${tag} <span class="badge bad">${state}</span>
+        <code>${attestation.reason ?? 'no detail'}</code>`;
+    default:
+      return `${tag} <span class="badge">not attested</span>
+        <code>${attestation?.reason ?? 'KURIER_API_KEY is not set'}</code>`;
+  }
+}
+
+function zkBlock(zk) {
+  if (!zk || zk.error) {
+    return `<div class="zk"><span class="label">settlement proof</span>
+      <div class="bad">unavailable — ${zk?.error ?? 'no proof returned'}</div></div>`;
+  }
+  const signals = zk.signals ?? {};
+  return `<div class="zk">
+    <div class="zk-head">
+      <span class="label">settlement proof</span>
+      <span class="badge ${zk.localVerify ? 'ok' : 'bad'}">
+        ${zk.localVerify ? 'groth16 verified' : 'INVALID'}
+      </span>
+    </div>
+    <div class="mono">${zk.circuit.name} · ${zk.circuit.constraints} constraints · proved in ${zk.proveMs} ms</div>
+    <div class="mono">payoutsHash <code>${short(signals.payoutsHash, 12)}</code></div>
+    <div class="mono">balancesHash <code>${short(signals.balancesHash, 12)}</code></div>
+    <div class="mono">nonce <code>${short(signals.nonce, 12)}</code></div>
+    <div class="mono" id="attest">${attestationLine(zk.attestation)}</div>
+  </div>`;
+}
+
+let attestTimer;
+
+function watchAttestation(attestation) {
+  clearInterval(attestTimer);
+  if (!attestation?.jobId || ['finalized', 'failed', 'error'].includes(attestation.status)) return;
+  let tries = 0;
+  attestTimer = setInterval(async () => {
+    tries += 1;
+    try {
+      const next = await api(`/api/rooms/${room.id}/attestation`);
+      const el = document.getElementById('attest');
+      if (el) el.innerHTML = attestationLine(next);
+      if (['finalized', 'failed', 'error'].includes(next.status) || tries >= 10) clearInterval(attestTimer);
+    } catch {
+      if (tries >= 10) clearInterval(attestTimer);
+    }
+  }, 4000);
+}
+
 async function loadSettlement() {
   const data = await api(`/api/rooms/${room.id}/settle`, { method: 'POST' });
   const winner = room.players[data.winnerIdx]?.id?.toUpperCase() ?? '—';
@@ -195,8 +259,10 @@ async function loadSettlement() {
     <div class="${data.replay.ok ? 'ok' : 'bad'}">
       replay of ${data.replay.actions} actions ${data.replay.ok ? 'matches the final state' : 'MISMATCH'}
     </div>
+    ${zkBlock(data.zk)}
     <div><span class="label">revealed seed</span><code>${data.seed}</code></div>
     <div><span class="label">commitment</span><code>${data.commitment}</code></div>`;
+  watchAttestation(data.zk?.attestation);
 }
 
 function render() {

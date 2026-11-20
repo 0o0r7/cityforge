@@ -181,6 +181,28 @@ button.link { background: none; border: none; color: var(--muted); padding: 0; t
 .ok { color: var(--green); }
 .bad { color: var(--red); }
 
+.zk {
+  border-top: 1px solid var(--amber-dim);
+  padding-top: 8px;
+  display: grid;
+  gap: 3px;
+}
+.zk-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.zk .mono { display: flex; gap: 6px; align-items: baseline; }
+.zk code { color: var(--ink); }
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--amber-dim);
+  color: var(--amber);
+}
+.badge.ok { border-color: var(--green); color: var(--green); }
+.badge.bad { border-color: var(--red); color: var(--red); }
+
 .log {
   margin: 0;
   padding: 0 0 0 16px;
