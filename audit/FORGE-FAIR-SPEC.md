@@ -105,6 +105,20 @@ settle       → build payout vector → prove → Kurier submit → poll to Fin
 - USDC is the **native gas token**; there is no ERC-20 hop. Balances and transfers are plain value transfers.
 - Deposit detection by tx hash + receipt; never by client claim.
 
+## 6.1 Hosting — Azure for Students
+
+DigitalOcean is no longer part of the GitHub Student Pack, so the earlier suggestion is out. Azure for Students
+($100, no card required, already active) is the better fit anyway:
+
+- **Target: App Service on Linux, B1, always-on.** HTTPS and a hostname come for free, the container restarts
+  itself, and `/home` is persistent — which matters because the settlement ledger is the lock that makes
+  idempotency work across restarts.
+- **Not Container Apps.** It scales to zero (a judging endpoint must answer instantly) and its storage is
+  stateless; making it correct needs min-replicas 1 plus an Azure Files mount. More moving parts, no benefit at
+  this size.
+- **Not a VM.** TLS, reverse proxy, patching and firewall rules would eat hours that the circuit needs.
+- **Cost.** A B1 for 23 Nov – 1 Dec is roughly $4 — comfortably inside the $100 credit, so no free-tier sleeping.
+
 ## 7. Public surface
 
 - `POST /rooms` · `POST /rooms/:id/join` · `POST /rooms/:id/roll` · `POST /rooms/:id/buy` · `POST /rooms/:id/settle`
