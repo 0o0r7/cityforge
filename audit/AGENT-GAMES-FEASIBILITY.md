@@ -53,6 +53,26 @@ Reviewers look for: a useful problem, a working implementation, a clear explanat
 optional plus, and the public share. Agents without zkVerify stay eligible — but "make verification essential"
 is the axis the organisers push, and it is the only differentiator a small team can win on.
 
+### 1.3 Submission window vs. prize probability — not the same thing
+
+A fair challenge, and it corrects the wording above: **are these two tracks closed to entry? No.** All tracks
+share one deadline (2026-11-21 22:00 UTC) and registration stays open until it; Steal the VFY explicitly allows
+mid-tournament entry. "Closed" was imprecise. What is closed is the **gap to the podium**, and it is closed by
+arithmetic rather than by a form:
+
+- **Proof Gatekeeper** — standings are cumulative. Top three sit at 681.9 / 672.4 / 671.3; a newcomer's entire
+  remaining ceiling is one make-up window of 8 tasks ≈ 100 points. No ordering of correct answers closes a
+  570-point gap in one window.
+- **Steal the VFY** — seven Swiss rounds planned, R5 current. A new agent enters at R6 and can play at most two
+  matches: 2 × (+18 + reliability ≤ +2) = 40 points, against 62 for third place.
+
+The one development that would overturn this: an announcement of *additional* rounds beyond seven. Nothing in
+the platform announcement feed promises them; if one appears, re-run the arithmetic before dismissing the track.
+
+Entering is only cheap where the build already exists. For these two it does not — each needs a committed-policy
+circuit plus per-turn proofs, and that build buys a ceiling of 40–100 points. The same effort spent on a product
+the panel reviews is the better trade.
+
 ## 2. Verdict on this repository as it stands
 
 **This repository cannot be submitted as-is.** It is an audit and evidence snapshot, not an application:

@@ -1,0 +1,155 @@
+# Forge Fair — minimum real product specification
+
+Derived from CityForge (this repository's recovered architecture) for zkVerify Agent Games.
+Written 2026-11-20 20:50 UTC. Deadline 2026-11-21 22:00 UTC → **≈ 25 h remaining**.
+
+## 0. The constraint that shapes everything
+
+The deliverable must be a **working product**, not a demo or a mockup. That rules out a recorded fixture
+standing in for a live path, a "proof" that was generated once and replayed, and a payout that is printed on
+screen instead of signed on-chain. Every claim below must be reproducible by a third party from public data.
+
+It equally rules out the full game: a 40-tile board with trading, mortgages and auctions cannot be built,
+tested and deployed in 25 hours without at least one of those components degenerating into a mockup. So the
+board shrinks; the **money loop does not**.
+
+## 1. Product statement
+
+**Forge Fair is a playable on-chain board game whose settlement is provable — players never have to trust the
+house.** One sentence for the submission form: *the agent runs the money in a game and proves, on zkVerify,
+that the pot reached the true winner with no hidden rake.*
+
+Who it helps: any on-chain game or betting surface where the operator is the adversary — the player needs to
+verify the payout without trusting the server, and the operator needs to prove it did not cheat without
+publishing its seed or strategy.
+
+## 2. Scope
+
+### In
+- A playable board, 2–4 players, one browser client.
+- Committed-seed dice: commit at room creation, reveal at settlement. A roll cannot be re-rolled after the
+  board is visible.
+- Real USDC movement on Arc Testnet (chainId 5042002, USDC as native gas): entry stake in, pot out.
+- A Groth16 proof per settlement, verified on **zkVerify mainnet through Kurier** and gated on `Finalized`
+  before the transfer is signed.
+- A public ledger: every settlement with its commitment, its payouts, and its finalized verification reference,
+  replayable by anyone.
+
+### Out (and said so on the submission page)
+- Trading, auctions, mortgages, houses/hotels, chance-card decks beyond a fixed effect table.
+- Multi-round tournaments, matchmaking, ratings.
+- Any real-money use. Arc Testnet only; stakes are testnet USDC.
+
+## 3. Game rules (the whole rulebook)
+
+- Board: 16 tiles, ring layout. 1 start, 9 properties in two price tiers, 3 tax tiles, 2 rest tiles, 1 jail
+  (skip one turn). Fixed rent table — rent depends only on tile id, never on negotiation.
+- 2d6 from the committed seed stream: `roll_i = 1 + (keccak(seed ‖ i) mod 6)` per die, rejection-sampled to
+  avoid modulo bias (the CityForge bundle already does this — reuse the approach).
+- Entry stake `S` per player, paid into the pot at join. Pot = `n · S`.
+- Landing on an unowned property: buy for its price out of the player's balance into the pot. Owned: pay rent to
+  the owner from balance.
+- Elimination: a player whose balance cannot cover a due payment is eliminated; their remaining balance is
+  returned and their properties become unowned.
+- End: one survivor, or 24 rounds elapsed → ranking by final balance.
+- Settlement: a single payout vector `p[]` over all players, `sum(p) = pot`.
+
+## 4. The proof
+
+Two layers, and the split is deliberate — it is what makes this buildable in the window while staying honest.
+
+**Layer 1 — replay.** The seed is revealed at settlement. Anyone can re-run the deterministic engine from
+`(seed, joins, actions)` and recompute the entire game and the payout vector. This proves *the rules were
+followed*. No circuit needed.
+
+**Layer 2 — `settle.circom`.** Proves the money moved exactly as committed, in one shot:
+
+| | Signal |
+|---|---|
+| public | `potCommitment`, `payoutsHash`, `pot`, `cap`, `settlementNonce`, `winnerIdx` |
+| private | `payouts[4]`, `balances[4]`, `salts[4]` |
+
+Constraints:
+1. `Poseidon(payouts, salts) == payoutsHash` — the vector is the one that was committed before the transfer.
+2. `Σ payouts == pot` — no hidden rake, nothing withheld.
+3. `payouts[i] ≤ cap` — no payout above the committed ceiling.
+4. `balances[winnerIdx] ≥ balances[j]` for all `j` — the winner is the true argmax, not the operator's pick.
+5. `settlementNonce` is bound into `payoutsHash` — a settled vector cannot be replayed for a second transfer.
+
+Roughly 5k constraints: proving takes seconds, verification is cheap. This is a real claim a player cares
+about, expressed in a circuit small enough to finish today.
+
+**Honest limit:** the circuit does not re-run the board in zero knowledge. It proves *conservation, cap,
+true-winner and single-use* against a committed vector; the rules themselves are covered by replay. Both are
+stated on the ledger page rather than blurred into one "fully verified" claim.
+
+## 5. Agent flow
+
+```
+create room  → commit seed, open joins
+join         → verify stake tx on Arc, add player
+turn         → derive roll, apply rules, append action log (no money moves)
+settle       → build payout vector → prove → Kurier submit → poll to Finalized
+             → sign Arc transfer → publish ledger entry
+```
+
+- The transfer is signed **only** after `Finalized`. A pending or failed verification leaves the settlement in
+  `PROVEN_FAILED`, visible on the ledger — never silently retried into a payout.
+- Idempotency: one settlement per `settlementNonce`; the ledger row is the lock, not process memory.
+- Every state transition is persisted; the agent restarts mid-game without corrupting a pot.
+
+## 6. Arc integration
+
+- `chainId 5042002`, RPC `rpc.testnet.arc.network`, explorer `arcscan` (values recovered from
+  `artifacts/assets/ArcOwnerControl-*.js` in this repository).
+- USDC is the **native gas token**; there is no ERC-20 hop. Balances and transfers are plain value transfers.
+- Deposit detection by tx hash + receipt; never by client claim.
+
+## 7. Public surface
+
+- `POST /rooms` · `POST /rooms/:id/join` · `POST /rooms/:id/roll` · `POST /rooms/:id/buy` · `POST /rooms/:id/settle`
+- `GET /rooms/:id` — state, seed commitment, action log
+- `GET /ledger` — settlements with `potCommitment`, `payoutsHash`, `jobId`, zkVerify tx, block, Arc tx, seed
+- `GET /health`
+- Web client: the board, the turn loop, and a **Verify** button that re-runs the game from the revealed seed in
+  the browser and diffs the result against the ledger's payout vector.
+
+## 8. 25-hour plan
+
+| Window (UTC) | Work |
+|---|---|
+| H0–2 | Scaffold; deterministic engine + committed-seed dice + unit tests |
+| H2–6 | `settle.circom`, compile, ptau, vkey, `register-vk` on Kurier |
+| H6–10 | Agent: prover, Kurier submit/poll, Arc transfer, idempotency, restart safety |
+| H10–13 | Web client (board, turn loop, verify button) + ledger page |
+| H13–15 | Deploy; one full game with two real wallets; one finalized reference end to end |
+| H15–18 | README, 3-minute video, public thread |
+| H18–20 | Wildcard form + Creator Track entry |
+| H20–25 | Buffer — expect the circuit and the faucet to eat it |
+
+## 9. Risks, with the fallback for each
+
+| Risk | Likelihood | Fallback |
+|---|---|---|
+| circom toolchain / ptau friction in the sandbox | Medium | Prove a reduced statement (conservation + nonce only) — still a real zkVerify proof |
+| Arc faucet or RPC unusable | Medium | Settlement proof stays real; transfer moves to a documented testnet account with a signed-but-unsent tx shown as such, **and the limitation is stated, not hidden** |
+| Kurier key / rate limits | Low | Queue settlements; ledger shows `PENDING_VERIFICATION` honestly |
+| Proving too slow for the UI | Low | Prove server-side, stream status to the client |
+| Board UI eats the schedule | High | Ship the turn loop as a functional table view first; polish only if H13 is met |
+
+## 10. Division of labour
+
+The build is mine. These cannot be delegated and are on the critical path:
+
+1. Register at `/register` (X or wallet), connect GitHub and the prize wallet.
+2. Create the Kurier API key.
+3. Provide a funded Arc Testnet wallet (faucet) for the pot, plus a second wallet to play against.
+4. A host for the public endpoint and the prover.
+5. Record the 3-minute video and post the public thread.
+
+## 11. What is submitted where
+
+- **Wildcard** — primary. This product, judged on usefulness, working implementation, explanation, verifiability.
+- **Creator Track** — same build, documented publicly. Separate 100,000 VFY pool.
+- **Proof Gatekeeper / Steal the VFY** — not entered. See §1.3 of `AGENT-GAMES-FEASIBILITY.md`: entry is open,
+  the podium is arithmetically out of reach, and the build they require is not the build this product needs.
