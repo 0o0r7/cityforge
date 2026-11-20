@@ -78,14 +78,28 @@ and audit findings as its motivation.** The remaining question is whether that f
 One build, two pools: submit it to **Wildcard**, then document the same build for the **Creator Track**
 (`#AgentGames`, tag `@ZKVProtocol`). Separate 100,000 VFY pools, one body of work.
 
-**Concept — proof-gated payment agent for stablecoin rails.** An agent is asked to move USDC (the repo's own
-domain: Arc Testnet, chainId 5042002, USDC as native gas). Before it authorises anything it requires a Groth16
-proof that the payment satisfies a committed policy — recipient allowlist membership, per-transfer cap, budget,
-expiry block, single-use nonce — verifies that proof through **Kurier** until it reaches `Finalized`, and only
-then acts. Every decision is recorded with its finalized verification reference, so a third party can check why
-the agent paid without seeing the policy internals. This mirrors the trap taxonomy the arena itself uses
-(VK substitution, threshold mismatch, proof reuse, expiry, recipient mismatch, amount overflow) and turns the
-repo's audit findings into the threat model.
+**Concept — "Forge Fair": a playable on-chain game whose settlement is provable.** This is CityForge's idea,
+rebuilt around the one thing the arena is actually about: nobody has to trust the house. The game keeps the
+ARC-Monopoly shape — players take turns, dice decide movement, landing on an owned tile moves USDC, bankruptcy
+eliminates a player — but the money loop is executed by a **settlement agent** that cannot cheat silently:
+
+- The dice outcome derives from a committed seed, so a roll cannot be re-rolled after seeing the board.
+- Every settlement (rent, payout, elimination, final split) ships with a Groth16 proof of a small invariant set:
+  payouts sum exactly to the pot, each payout is within the committed cap, the paid party matches the committed
+  winner index, and the settlement nonce is single-use.
+- The proof is verified on **zkVerify mainnet through Kurier** and must reach `Finalized` before the transfer is
+  signed on Arc Testnet (chainId 5042002, USDC as native gas).
+- A public ledger page lists every settlement with its finalized verification reference, so a player can check
+  the house took no hidden rake — without the agent revealing its seed or strategy.
+
+The repo's audit supplies the threat model, not decoration: session takeover on room initialisation, the
+bankruptcy deadlock that freezes a 3–4 player game, and the dead HMAC winner-ticket flow are exactly the failures
+this design removes by making settlement verifiable instead of trusted.
+
+Scope discipline — what "real product" means here, and what does not fit in 24 h: the board is compact (not 40
+tiles with mortgages and trading), but the loop is complete and runs end to end with real testnet USDC, real
+proofs and real finalized references. No mockups, no recorded fixtures standing in for a live path. A full
+Monopoly clone in this window would end as a mockup, which is the one outcome to avoid.
 
 Fallback if the custom circuit overruns: reuse the published, mainnet-registered `gatekeeper` circuit
 (`vk_hash 0x6b79c6…77b0`) so the proof path stays real while the custom circuit is finished.
@@ -93,11 +107,12 @@ Fallback if the custom circuit overruns: reuse the published, mainnet-registered
 ### 3.1 Hour-by-hour (25 h budget, ~20 h of work)
 | Block | Work | Owner |
 |---|---|---|
-| H0–1 | Register at `/register` (X or wallet), connect GitHub + prize wallet, create Kurier API key | User |
-| H1–3 | Repo scaffold, `policy.circom`, compile, vkey, `register-vk` on Kurier | Build |
-| H3–8 | Agent service: policy engine, proof generation, Kurier submit + poll, signed responses, tests | Build |
-| H8–11 | Deploy public HTTPS endpoint, health check, one end-to-end finalized proof | Build + user credentials |
-| H11–15 | Demo UI (request → APPROVE/REJECT with reason + proof + finalized reference) | Build |
+| H0–1 | Register at `/register` (X or wallet), connect GitHub + prize wallet, create Kurier API key, choose host | User |
+| H1–2 | Repo scaffold; game engine (committed-seed dice, compact board, elimination) | Build |
+| H2–6 | `settle.circom` invariants, compile, vkey, `register-vk` on Kurier | Build |
+| H6–10 | Settlement agent: prover, Kurier submit/poll to `Finalized`, Arc USDC transfer, idempotency | Build |
+| H10–13 | Deploy endpoint + playable web client + public ledger page | Build + user credentials |
+| H13–15 | End-to-end run: two real wallets, one full game, one finalized reference on the ledger | Build |
 | H15–18 | README, 3-minute video, public thread | Build |
 | H18–20 | Wildcard submission form + Creator Track entry | User |
 | H20–25 | Buffer, retries, judge-facing polish | — |
@@ -105,8 +120,8 @@ Fallback if the custom circuit overruns: reuse the published, mainnet-registered
 ### 3.2 Hard dependencies and risks
 1. **Public HTTPS hosting.** The endpoint must be live and stable through judging (23 Nov – 1 Dec). A sandbox
    preview is not suitable: its host rotates and it is a development environment. A real deploy target and its
-   credentials are required (Cloudflare Workers matches the account already evidenced in this audit, or any
-   PaaS).
+   credentials are required. Note: Groth16 proving with snarkjs is memory- and CPU-hungry, so a small container
+   host is the safer target for the prover; an edge runtime such as Cloudflare Workers fits only the HTTP edge.
 2. **Identity steps are the user's alone.** Account creation, GitHub connection, prize wallet, and the
    submission form cannot be delegated.
 3. **Kurier API key** — email sign-up, free; needed before any proof can be finalized on mainnet.
