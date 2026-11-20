@@ -93,3 +93,35 @@ identity.
 - **Subscription not listed** → the student subscription may need re-activation at
   <https://portal.azure.com/#view/Microsoft_Azure_Billing/SubscriptionsBlade>;
   nothing in the build can work around that.
+
+---
+
+## Deployment record — 2026-11-20
+
+Live at <https://forge-fair-eda0e7.azurewebsites.net> (HTTPS only, always on).
+
+| Resource | Name |
+|---|---|
+| Resource group | `forge-fair-rg` |
+| App Service plan | `forge-fair-plan` — Linux, B1, **eastus2** |
+| Web App | `forge-fair-eda0e7` — `NODE\|22-lts` |
+
+Notes that cost time, so nobody repeats them:
+
+- **Region policy.** This subscription carries a "best available regions" policy that rejects
+  App Service in `westeurope` (`RequestDisallowedByAzure`). `eastus2` was accepted; the resource
+  group still lives in `westeurope`, which is allowed because a group is only a container.
+- **No `zip` binary** in this sandbox — the package is built with `python3 -m zipfile` equivalent
+  (`zipfile.ZipFile`), with `package.json` at the archive root because the app lives in `app/`.
+- **Publish with Kudu zipdeploy**, using the credentials from
+  `POST .../sites/<name>/config/publishingcredentials/list` (that call needs a request body,
+  otherwise ARM answers `411 Length Required`). A first push does not restart the site — call
+  `POST .../sites/<name>/restart` or the default App Service welcome page keeps being served.
+- **Rooms are in memory.** A restart or a redeploy clears every open room; the engine is
+  deterministic, so only unfinished games are lost, never the settlement of a finished one.
+- The access token used here expires about 60 minutes after it is issued; each new deploy needs
+  a fresh one from `az account get-access-token`.
+
+Verification run against the live app: page, stylesheet, script and `/api/board` all `200`; a
+two-player room played 35 moves to settlement, and the settlement endpoint replayed every action
+to the same final state (`replay.ok: true`, pot 1700, seed revealed at 32 hex chars).

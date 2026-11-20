@@ -127,8 +127,8 @@ function renderPanel() {
       if (i === room.turn && room.status === 'active') li.classList.add('active');
       if (player.out) li.classList.add('out');
       li.innerHTML = `
-        <span class="who"><span class="chip">${playerLabel(i)}</span> ${player.staked ? 'staked' : 'joining'}</span>
-        <span class="bal">${player.balance}</span>`;
+        <span class="who"><span class="chip">${playerLabel(i)}</span>${player.staked ? '' : ' joining'}</span>
+        <span class="bal">${player.balance}<small> credits</small></span>`;
       return li;
     }),
   );
