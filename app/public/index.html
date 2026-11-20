@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge Fair — provable settlement</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <span class="mark">FF</span>
+        <div>
+          <h1>Forge Fair</h1>
+          <p class="sub">Sixteen tiles, a committed seed, one provable payout.</p>
+        </div>
+      </div>
+      <div class="commit">
+        <span class="label">Seed commitment</span>
+        <code id="commitment">—</code>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="board" id="board" aria-label="Board"></section>
+
+      <aside class="panel">
+        <div class="row">
+          <div class="stat"><span class="label">Round</span><b id="round">1</b></div>
+          <div class="stat"><span class="label">Pot</span><b id="pot">0</b></div>
+          <div class="stat"><span class="label">Turn</span><b id="turn">—</b></div>
+        </div>
+
+        <ul class="players" id="players"></ul>
+
+        <div class="actions">
+          <button id="roll" class="primary">Roll</button>
+          <button id="buy" class="ghost" hidden>Buy</button>
+          <button id="skip" class="ghost" hidden>Skip</button>
+        </div>
+        <p class="hint" id="hint">Stake 200 each. Last solvent player takes the pot.</p>
+
+        <div class="result" id="result" hidden></div>
+
+        <ol class="log" id="log" aria-label="Game log"></ol>
+
+        <div class="foot">
+          <button id="new" class="link">New game</button>
+          <span id="roomId" class="mono"></span>
+        </div>
+      </aside>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
