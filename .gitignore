@@ -7,3 +7,7 @@
 credentials*
 node_modules/
 .DS_Store
+
+# Third-party evidence captured during the audit: kept outside this repository, never committed.
+artifacts/
+audit/cf-api/*worker-source*

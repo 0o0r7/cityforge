@@ -204,8 +204,7 @@ No build step: the browser loads ES modules directly, and the server is a single
 │   ├── HISTORY-ARC-MONOPOLY.md   master case file of the predecessor audit
 │   ├── VERIFICATION-RUN1-vs-RUN2.md
 │   ├── AGENT-GAMES-FEASIBILITY.md
-│   └── cf-api/                   Cloudflare API evidence and the recovered worker source
-├── artifacts/                    published front-end snapshot of the predecessor, with hashes
+│   └── cf-api/                   Cloudflare API evidence (JSON responses)
 ├── docs/
 │   ├── AZURE-SETUP.md            deployment identity and records
 │   └── assets/                   banner and social preview
@@ -237,8 +236,8 @@ What that audit changed here:
 
 1. **Language.** Every authored document, commit message and comment in this repository is in English, in a
    technical register. No other language is used.
-2. **Evidence is quoted, not rewritten.** Raw API responses and the recovered worker source are preserved
-   exactly as received; they are the only files exempt from authoring rules.
+2. **Evidence is quoted, not rewritten.** Raw API responses are preserved exactly as received; they are the
+   only files exempt from authoring rules.
 3. **Claims are bounded.** Anything designed but not built is labelled as such, in the README, the
    specification and the proof page.
 
@@ -246,5 +245,6 @@ What that audit changed here:
 
 ## License
 
-Application code and documentation: MIT. The recovered worker source under `audit/cf-api/` is the property of
-its account owner and is kept here as that owner's backup.
+Application code and documentation: MIT. The recovered worker source and the predecessor's published front-end
+snapshot are the property of their account owner. They are not redistributed in this repository and are held
+outside it.

@@ -78,11 +78,12 @@ the panel reviews is the better trade.
 **This repository cannot be submitted as-is.** It is an audit and evidence snapshot, not an application:
 
 - No application source: no `package.json`, no server, no build step. The only code is
-  `audit/cf-api/cityforge-edge-worker-source.js` (recovered evidence, 828 lines) and
-  `tools/cf_edge_audit.sh` (a GET-only audit script).
+  `tools/cf_edge_audit.sh` (a GET-only audit script). The recovered 828-line worker source was reviewed during
+  the audit and is held outside this repository.
 - The CityForge backend is frozen since 2026-08-22, its CORS is pinned to a deleted Manus origin, and the
   hosting project no longer exists. It cannot be revived as a live demo inside the window.
-- `artifacts/` holds minified production bundles and an HTML shell — readable as evidence, not runnable as source.
+- The predecessor's minified production bundles and HTML shell were recovered during the audit; they are held
+  outside this repository — readable as evidence, not runnable as source.
 
 What the repository *does* contribute is domain knowledge and credibility: server-authoritative Arc Testnet
 USDC flows, HMAC-signed session and claim tickets, and a documented set of real payment-authorisation failures

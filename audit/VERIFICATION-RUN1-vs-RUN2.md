@@ -35,7 +35,7 @@ Run-1 sizes were recorded in the audit session log; Run-2 sizes are reproducible
 Current Run-2 SHA-256 (16-char prefixes) for future comparison:
 `01_verify` b89b154e9be4b4f91 · `09_subinfo` 433bcf319294cba49 (full values in commit history; regenerate with `sha256sum audit/cf-api/*.json`).
 
-## 2. Worker source cross-check
+## 2. Worker source cross-check (source held outside this repository)
 | Property | Run 1 | Run 2 | Match |
 |---|---|---|---|
 | Characters | 37,267 | 37,267 | ✓ |
