@@ -125,3 +125,28 @@ Notes that cost time, so nobody repeats them:
 Verification run against the live app: page, stylesheet, script and `/api/board` all `200`; a
 two-player room played 35 moves to settlement, and the settlement endpoint replayed every action
 to the same final state (`replay.ok: true`, pot 1700, seed revealed at 32 hex chars).
+
+---
+
+## Redeploy — 2026-11-21 (multi-page build)
+
+Redeployed the current source (`app/public` split into `css/` and `js/`, per-seat settlement
+gate) over the previous single-file build.
+
+- **`zipdeploy` mirrors the archive, but Oryx did not run `npm install`** even with
+  `SCM_DO_BUILD_DURING_DEPLOYMENT=true`, and the mirror deletes `node_modules` that a previous
+  manual install left behind. The site then crashes at startup (`Cannot find package 'snarkjs'`,
+  container exit code 1, public URL answers `503`). After every zipdeploy run:
+  `POST https://<site>.scm.azurewebsites.net/api/command` with
+  `{"command":"npm install --omit=dev --no-audit --no-fund","dir":"site/wwwroot"}`, then start
+  the site (`POST .../sites/<name>/start` — a failed startup leaves it stopped).
+- `zipdeploy` does not remove files dropped from the archive, so `public/styles.css` and
+  `public/app.js` from the old build stay reachable. They are unreferenced; Kudu refuses to
+  delete them (`409`) while the container runs.
+- `KURIER_API_KEY` can be added with `POST https://<site>.scm.azurewebsites.net/api/settings`
+  (Kudu merges and answers `204`). The ARM `config/appsettings` list does not always show the
+  key afterwards, but `GET /api/settings` does — and the app picks it up on the next start.
+
+Verified after the restart: `/` serves the new `index.html` (`2684` bytes), all five
+stylesheets and all eleven scripts match the local byte sizes, `/api/board` and `/api/circuit`
+answer `200`, and `POST /api/rooms` creates an active two-seat room.
