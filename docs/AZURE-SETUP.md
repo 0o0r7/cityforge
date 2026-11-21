@@ -143,10 +143,32 @@ gate) over the previous single-file build.
 - `zipdeploy` does not remove files dropped from the archive, so `public/styles.css` and
   `public/app.js` from the old build stay reachable. They are unreferenced; Kudu refuses to
   delete them (`409`) while the container runs.
-- `KURIER_API_KEY` can be added with `POST https://<site>.scm.azurewebsites.net/api/settings`
-  (Kudu merges and answers `204`). The ARM `config/appsettings` list does not always show the
-  key afterwards, but `GET /api/settings` does — and the app picks it up on the next start.
+- **`POST .../scm.azurewebsites.net/api/settings` is a trap.** It answers `204` and the value
+  shows in Kudu's own `GET /api/settings`, but it never reaches the site config: the running
+  app still reads `process.env.KURIER_API_KEY` as empty and settles as `not-configured`.
+- **`PUT .../config/appsettings` answers `400 "The parameter properties has an invalid value"`
+  even when the payload repeats the settings unchanged** (tested on `2022-03-01`, `2022-09-01`
+  and `2023-12-01`), so the app settings cannot be written that way with this identity. What
+  works is a merge-patch on the site itself:
+  `PATCH .../sites/<name>?api-version=2022-03-01` with
+  `{"properties":{"siteConfig":{"appSettings":[{"name":"PORT","value":"8080"}, …, {"name":"KURIER_API_KEY","value":"<key>"}]}}}`
+  — send every setting you want to keep, then restart the site.
 
 Verified after the restart: `/` serves the new `index.html` (`2684` bytes), all five
 stylesheets and all eleven scripts match the local byte sizes, `/api/board` and `/api/circuit`
 answer `200`, and `POST /api/rooms` creates an active two-seat room.
+
+### Live settlement with a finalized zkVerify attestation
+
+`POST /api/demo` (3 seats) played 85 frames to `settled`; `POST /api/rooms/<id>/settle` proved
+in `4971` ms with `localVerify: true`, pot `2300`, and Kurier accepted the proof on **mainnet**:
+
+```
+jobId   9c7891b3-e565-11f1-838e-1e6a0d14f999
+vkHash  0xebc2741ce04083a3bbd3c70d46ccdf80d61b14153737d8d50a92a227d1218a1b
+tx      0x6d2e4a24d8bb3aae1f934aedd7511822c66bf8059e89e173527225522e360576
+block   0xd961c23addabca60b576edce4156778465d8a6c0b1f5ab75aa50f2dfeeea641a
+```
+
+`GET /api/rooms/<id>/attestation` went `submitted` → `pending` → **`Finalized` in ~30 s**, so
+the settlement gate releases the payout on the public deployment.
