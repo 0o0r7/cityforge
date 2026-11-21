@@ -122,6 +122,66 @@ export function homeView({ tiles }) {
     </section>
 
     <section class="section">
+      <div class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2>Rules decide the moves. The circuit checks the payout.</h2>
+        <p class="lead">
+          Three things carry the game: a short rule set, an economy that never leaks a credit, and a
+          settlement you can verify without trusting this server.
+        </p>
+      </div>
+
+      <div class="mechanics">
+        <article class="mechanic">
+          <span class="mechanic-tag">The game</span>
+          <h3>Roll, land, resolve</h3>
+          <ul class="mechanic-list">
+            <li>Two dice, sixteen tiles, two to four seats on one device.</li>
+            <li>Land on a free deed and buy it, or pass.</li>
+            <li>Land on someone’s deed and pay them rent.</li>
+            <li>Tolls feed the pot; the Hold costs you a turn.</li>
+            <li>Twenty-four rounds, or one solvent seat left.</li>
+          </ul>
+          <a class="mechanic-link" href="#/guide">Read the full rulebook</a>
+        </article>
+
+        <article class="mechanic">
+          <span class="mechanic-tag">The economy</span>
+          <h3>Zero-sum, on purpose</h3>
+          <p>
+            Credits are a closed score, not a token. No deposit, no withdrawal, no faucet — the only
+            credits in play are the buy-ins.
+          </p>
+          <ul class="economy-flow" aria-label="Where credits move">
+            <li><span>Buy-ins</span><b>→ pot</b></li>
+            <li><span>Rent</span><b>seat → seat</b></li>
+            <li><span>Tolls &amp; deeds</span><b>→ pot</b></li>
+            <li><span>Bankrupt seat</span><b>→ pot</b></li>
+            <li class="out"><span>Payout</span><b>pot → leader</b></li>
+          </ul>
+          <p class="mechanic-foot">The pot leaves once, so balances and pot must agree exactly.</p>
+        </article>
+
+        <article class="mechanic">
+          <span class="mechanic-tag">The settlement</span>
+          <h3>Proved, then anchored on zkVerify</h3>
+          <ul class="mechanic-list">
+            <li>Commitment to the dice seed is published before the first roll.</li>
+            <li>The finished game is replayed from the revealed seed.</li>
+            <li>A Groth16 proof binds the payout to the pot, cap, leader and a fresh nonce.</li>
+            <li>The proof is verified locally before the response leaves the server.</li>
+            <li>zkVerify finalizes it with a public transaction hash.</li>
+          </ul>
+          <a class="mechanic-link" href="#/proof">See what the proof asserts</a>
+        </article>
+      </div>
+
+      <div class="row" style="margin-top:18px">
+        <button class="btn ghost" type="button" data-open-help>Open the field guide</button>
+      </div>
+    </section>
+
+    <section class="section">
       <div class="cta-band">
         <div>
           <h2 style="font-size:1.5rem">Take a seat.</h2>

@@ -377,6 +377,131 @@ select {
   margin: 0;
 }
 
+/* ---------- help modal ---------- */
+
+body.help-open {
+  overflow: hidden;
+}
+
+.help-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 4vw, 32px);
+  background: rgba(6, 5, 4, 0.72);
+  backdrop-filter: blur(6px);
+  animation: help-fade 0.16s ease-out;
+}
+
+.help-scrim[hidden] {
+  display: none;
+}
+
+.help-modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(760px, 100%);
+  max-height: min(86vh, 900px);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-2);
+  animation: help-in 0.18s ease-out;
+}
+
+.help-modal:focus {
+  outline: none;
+}
+
+.help-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px clamp(16px, 3vw, 26px);
+  border-bottom: 1px solid var(--line);
+}
+
+.help-head h2 {
+  margin-top: 6px;
+  font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+}
+
+.help-head .muted {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.help-body {
+  display: grid;
+  gap: 22px;
+  padding: clamp(16px, 3vw, 26px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.help-block h3 {
+  margin-bottom: 8px;
+}
+
+.help-block p {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.help-block p + p,
+.help-block p + .help-list,
+.help-block .help-list + p {
+  margin-top: 10px;
+}
+
+.help-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding-left: 18px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.help-list b {
+  color: var(--ink);
+}
+
+.help-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px clamp(16px, 3vw, 26px);
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  background: var(--surface-2);
+}
+
+@keyframes help-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes help-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* ---------- toasts ---------- */
 
 .toasts {
