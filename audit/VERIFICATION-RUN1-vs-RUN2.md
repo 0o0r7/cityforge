@@ -8,7 +8,7 @@
 | Run 1 | ~20:06–20:20 (2026-11-09) | Full 16-step GET audit + worker source recovery + live gameplay smoke test. Documents delivered to the user (v3). Sandbox files wiped afterwards by a workspace reset. |
 | Run 2 | ~20:45–20:55 (2026-11-09) | Same 16 GET steps re-executed + public artifacts re-fetched. Repository v4 built and pushed to GitHub (commit `aa5fdf2`). |
 
-The Run-1 document copies (v3, as delivered in chat) were later provided back by the user and are preserved verbatim under `archive/run1/`.
+The Run-1 document copies (v3, as delivered in chat) were later provided back and were compared against the current documents; the comparison is recorded here. The copies themselves are not retained in this repository, which is English-only.
 
 ## 1. Raw evidence cross-check (16 JSON files)
 | Evidence | Run 1 size (B) | Run 2 size (B) | Match |
@@ -44,7 +44,7 @@ Current Run-2 SHA-256 (16-char prefixes) for future comparison:
 | SHA-256 | (not computed in Run 1) | `0733d8b185803b15…` | n/a |
 
 ## 3. Document cross-check (v3 → v4/v5)
-The returned Run-1 copies (`archive/run1/AUDIT-REPORT-DIRECT.md`, `archive/run1/HISTORY-ARC-MONOPOLY.md`) are verbatim as-received (Persian, with UI-export markdown escaping). After normalization, the content deltas to the current documents are exactly the intended updates and **no contradictions**:
+The returned Run-1 copies (`AUDIT-REPORT-DIRECT.md`, `HISTORY-ARC-MONOPOLY.md`) were compared as received, including the UI-export markdown escaping in the originals. After normalization, the content deltas to the current documents are exactly the intended updates and **no contradictions**:
 
 | Delta | Direction |
 |---|---|
