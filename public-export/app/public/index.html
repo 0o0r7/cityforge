@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge Fair — a board game you can prove</title>
+    <meta
+      name="description"
+      content="Forge Fair is a 16-tile board game for 2–4 seats. Every payout is replayed from a committed seed and proved with Groth16, then anchored on zkVerify."
+    />
+    <meta name="theme-color" content="#0b0908" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23ff9f45'/%3E%3Ctext x='32' y='43' font-family='system-ui,sans-serif' font-size='26' font-weight='800' text-anchor='middle' fill='%231a1207'%3EFF%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/css/tokens.css" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/game.css" />
+    <link rel="stylesheet" href="/css/views.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#view">Skip to content</a>
+
+    <header class="site-head">
+      <a class="brand" href="#/" aria-label="Forge Fair — home">
+        <span class="mark" aria-hidden="true">FF</span>
+        <span class="brand-copy">
+          <strong>Forge Fair</strong>
+          <small>Provable settlement</small>
+        </span>
+      </a>
+
+      <nav class="site-nav" aria-label="Main">
+        <a href="#/play" data-nav="play">Play</a>
+        <a href="#/watch" data-nav="watch">Watch a bot</a>
+        <a href="#/guide" data-nav="guide">Rules</a>
+        <a href="#/proof" data-nav="proof">The proof</a>
+      </nav>
+
+      <div class="head-tools">
+        <button class="icon-btn" type="button" data-open-help title="How it works" aria-label="How Forge Fair works">
+          <span aria-hidden="true">?</span>
+        </button>
+        <button class="icon-btn" id="sound-toggle" type="button" aria-pressed="true" title="Sound on">
+          <span aria-hidden="true">♪</span><span class="sr-only">Toggle sound</span>
+        </button>
+        <a class="btn primary sm" href="#/play">Deal in</a>
+      </div>
+    </header>
+
+    <main id="view" class="view" tabindex="-1"></main>
+
+    <footer class="site-foot">
+      <span>Forge Fair · 16 tiles · 2–4 seats · 24 rounds</span>
+      <span class="foot-links">
+        <a href="#/guide">Rules</a>
+        <a href="#/proof">How the proof works</a>
+      </span>
+    </footer>
+
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>
