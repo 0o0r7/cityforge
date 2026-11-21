@@ -318,11 +318,15 @@ function table(ctx) {
       </div>`;
     try {
       settlement = await post(`/api/rooms/${room.id}/settle`);
-      settleEl.innerHTML = settlementCard({ settlement, room, names });
+      const view = room;
+      settleEl.innerHTML = settlementCard({ settlement, room: view, names });
       if (scroll) settleEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
       sfx.win();
       stopPoll?.();
-      stopPoll = watchAttestation(room.id, settleEl, settlement.zk?.attestation);
+      stopPoll = watchAttestation(room.id, settleEl, settlement.zk?.attestation, (attestation) => {
+        settlement.zk = { ...settlement.zk, attestation };
+        settleEl.innerHTML = settlementCard({ settlement, room: view, names });
+      });
     } catch (error) {
       settleEl.innerHTML = `<div class="panel"><p class="bad">${esc(error.message)}</p></div>`;
     }

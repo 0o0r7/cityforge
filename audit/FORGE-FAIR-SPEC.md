@@ -1,5 +1,10 @@
 # Forge Fair — minimum real product specification
 
+> **Implementation status (2026-11-21).** §6's cross-match public ledger and hash chain are **not
+> implemented**. What exists is the per-settlement anchor: each match publishes its own `Finalized`
+> reference (job id + tx hash) on the settlement card, and the payout is held until that reference is
+> final. Submission copy must not claim a ledger or a hash chain.
+
 Derived from CityForge (this repository's recovered architecture) for zkVerify Agent Games.
 Written 2026-11-20 20:50 UTC. Deadline 2026-11-21 22:00 UTC → **≈ 25 h remaining**.
 

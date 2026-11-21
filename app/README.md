@@ -74,5 +74,7 @@ typing in an input.
   seats: two to four players share one screen.
 - **Rooms live in memory** for two hours; a redeploy ends a match in progress.
 - **No accounts, no wallet.** Credits are a closed score, not a token.
+- **No cross-match ledger.** Each settlement shows its own finalized zkVerify reference on the
+  settlement card; there is no public index of past settlements and no hash chain.
 - **zkVerify is optional.** Without `KURIER_API_KEY` the settlement still carries a
   locally verified proof and reports itself as unattested.

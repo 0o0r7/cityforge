@@ -33,7 +33,7 @@ Deadline: **2026-11-21 22:00 UTC**. Judging: 23 Nov – 1 Dec. Winners: 5 Dec.
 - [ ] vkey registered via `register-vk` (required for a custom circuit)
 - [ ] Proof submitted through Kurier and polled until **`Finalized`**
 - [ ] `jobId`, verification tx hash and block captured and stored with the settlement
-- [ ] Ledger page renders that reference and links out
+- [ ] The settlement card on the public deployment renders that reference (job id + tx hash)
 - [ ] Re-verification path exists: a stranger can check the reference independently
 
 ## D. Product invariants (must hold at every commit)
@@ -42,8 +42,11 @@ Deadline: **2026-11-21 22:00 UTC**. Judging: 23 Nov – 1 Dec. Winners: 5 Dec.
 - [ ] **Zero-sum credits:** nothing minted, nothing burned
 - [ ] **Deterministic replay:** same seed + same actions ⇒ identical state and identical payout vector
 - [ ] **Seed secrecy:** the seed never leaves the server before settlement; only its commitment is public
-- [ ] **Anchor before credit:** no credit moves until the verification is `Finalized`
-- [ ] **Hash chain:** each settlement commitment includes the previous settlement hash
+- [x] **Anchor before payout:** the settlement card holds the payout (`held`) until the attestation is
+      `Finalized`, then publishes the amounts. Credits are a closed score with no chain transfer, so this
+      is a publication rule, not a token transfer.
+- [ ] **Hash chain:** *not implemented* — do not claim it. There is no cross-match ledger; each match
+      shows its own finalized reference.
 - [ ] **Idempotency:** one settlement per nonce; the ledger row is the lock, not process memory
 - [ ] **Honest labels:** the circuit proves conservation, cap, true winner and single-use — *not* a full
       zero-knowledge replay of the board. Say so wherever the claim appears.
