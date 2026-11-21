@@ -5,6 +5,22 @@ without handing over your own account. Everything below runs in the terminal —
 
 **Never paste a credential into chat.** Values go into the Secrets panel only.
 
+## Topology
+
+```mermaid
+flowchart LR
+  SRC["Source tree<br/>app/"] --> ZIP["Zip artifact<br/>about 2 MB"]
+  ZIP -->|"zipdeploy"| KUDU["Kudu build service"]
+  KUDU --> WEB["App Service<br/>Linux · Node 22 · always on"]
+  WEB -->|"POST settle"| KUR["Kurier API"]
+  KUR --> ZKV[("zkVerify mainnet")]
+  WEB -.->|"GET / and GET /api/circuit"| PROBE["Health probe"]
+```
+
+The App Service holds the only writable state that matters (in-memory rooms) and the only secret it needs is
+the Kurier key. Nothing about the deployment is baked into the client: the front end calls the same origin it
+was served from.
+
 ---
 
 ## Step 1 — Open Azure Cloud Shell

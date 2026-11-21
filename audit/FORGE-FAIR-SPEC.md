@@ -72,6 +72,20 @@ settlements, and any future ranking must count distinct opponents, not raw winni
 
 Two layers, and the split is deliberate — it is what makes this buildable in the window while staying honest.
 
+```mermaid
+flowchart TD
+  A["Seed committed at room open"] --> B["Typed actions recorded server-side"]
+  B --> C["Settlement requested"]
+  C --> D["Seed revealed"]
+  D --> E["Replay: recompute state and payout vector"]
+  E --> F{"payoutsHash matches the commitment?"}
+  F -->|"no"| X["Settlement rejected"]
+  F -->|"yes"| G["settle.circom: Groth16 proof"]
+  G --> H["Local verify before the response"]
+  H --> I["Kurier to zkVerify mainnet"]
+  I --> J["Finalized attestation published with the payout"]
+```
+
 **Layer 1 — replay.** The seed is revealed at settlement. Anyone can re-run the deterministic engine from
 `(seed, joins, actions)` and recompute the entire game and the payout vector. This proves *the rules were
 followed*. No circuit needed.

@@ -1,4 +1,4 @@
-# این ریپو فقط مستندات/شواهد حسابرسی است — هرگز این‌ها را کامیت نکنید:
+# Never commit credentials, local env files, dependencies or editor noise.
 .env
 .env.*
 *.pem
