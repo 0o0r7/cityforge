@@ -228,17 +228,19 @@ function player(ctx) {
       const settlement = await post(`/api/rooms/${demo.id}/settle`);
       demo.settlement = settlement;
       const last = demo.frames.at(-1).state;
-      settleEl.innerHTML = settlementCard({
-        settlement,
-        room: {
-          round: last.round,
-          players: settlement.balances.map((balance) => ({ balance })),
-        },
-        names: BOT_NAMES,
-      });
+      const roomView = {
+        round: last.round,
+        players: settlement.balances.map((balance) => ({ balance })),
+      };
+      const render = () =>
+        settlementCard({ settlement, room: roomView, names: BOT_NAMES });
+      settleEl.innerHTML = render();
       sfx.win();
       demo.stopPoll?.();
-      demo.stopPoll = watchAttestation(demo.id, settleEl, settlement.zk?.attestation);
+      demo.stopPoll = watchAttestation(demo.id, settleEl, settlement.zk?.attestation, (attestation) => {
+        settlement.zk = { ...settlement.zk, attestation };
+        settleEl.innerHTML = render();
+      });
     } catch (error) {
       if (button) {
         button.disabled = false;

@@ -570,6 +570,15 @@
   color: var(--gold);
 }
 
+/* A submitted proof is not a verified one: the payout stays held until zkVerify finalizes. */
+.settle[data-gate="pending"] .payouts .amount {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .proof {
   display: grid;
   gap: 10px;

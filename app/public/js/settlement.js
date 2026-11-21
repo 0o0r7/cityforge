@@ -57,20 +57,27 @@ export function proofBlock(zk) {
 
 export function settlementCard({ settlement, room, names = [] }) {
   const winner = settlement.winnerIdx;
+  // The payout is not published until the zkVerify attestation is final: a submitted job is
+  // not a verified one, and showing the amounts early would contradict the product's claim.
+  const gated = ['pending', 'submitted'].includes(settlement.zk?.attestation?.status);
   const payouts = (settlement.payouts ?? []).map((payout, i) => {
     const player = room.players[i];
     const label = seatName(i, names);
     return `<li class="${i === winner ? 'winner' : ''}">
       <span class="seat-dot" style="--seat:${seatColor(i)}"></span>
       <span>${esc(label)} <span class="faint">· ${money(player?.balance ?? settlement.balances[i])} left</span></span>
-      <span class="amount">${payout ? `+${money(payout)}` : '—'}</span>
+      <span class="amount">${gated ? 'held' : payout ? `+${money(payout)}` : '—'}</span>
     </li>`;
   });
 
-  return `<section class="settle" aria-label="Settlement">
+  return `<section class="settle" data-gate="${gated ? 'pending' : 'open'}" aria-label="Settlement">
     <div class="settle-head">
       <span class="eyebrow">Settled · round ${esc(Math.min(room.round, 24))}</span>
-      <h2><em>${esc(seatName(winner, names))}</em> takes ${money(settlement.payouts?.[winner] ?? 0)}</h2>
+      ${
+        gated
+          ? `<h2>Payout held until <em>zkVerify</em> finalizes</h2>`
+          : `<h2><em>${esc(seatName(winner, names))}</em> takes ${money(settlement.payouts?.[winner] ?? 0)}</h2>`
+      }
       <p class="muted">Pot ${money(settlement.pot)} · ${esc(settlement.replay?.actions ?? 0)} actions replayed ${
         settlement.replay?.ok ? 'and matched the final state' : '<strong>— mismatch</strong>'
       }</p>
@@ -85,8 +92,12 @@ export function settlementCard({ settlement, room, names = [] }) {
   </section>`;
 }
 
-/** Polls the zkVerify job behind a settlement until it reaches a final state. */
-export function watchAttestation(roomId, root, initial) {
+/**
+ * Polls the zkVerify job behind a settlement until it reaches a final state.
+ * `onFinal` re-renders the settlement so a held payout is published the moment the
+ * verification is final.
+ */
+export function watchAttestation(roomId, root, initial, onFinal) {
   const slot = root?.querySelector('[data-attest]');
   if (!slot || !initial?.jobId) return () => {};
   if (['finalized', 'failed', 'error'].includes(initial.status)) return () => {};
@@ -96,10 +107,18 @@ export function watchAttestation(roomId, root, initial) {
     tries += 1;
     try {
       const next = await api(`/api/rooms/${roomId}/attestation`);
+      if (next.status === 'finalized') {
+        clearInterval(timer);
+        if (onFinal) onFinal(next);
+        else slot.innerHTML = attestationLine(next);
+        return;
+      }
       slot.innerHTML = attestationLine(next);
-      if (['finalized', 'failed', 'error'].includes(next.status) || tries >= 20) clearInterval(timer);
+      // Finalization has taken from ~25 s to >10 min on mainnet, so the poll keeps going
+      // for eight minutes; a job that lands later is still picked up on the next page load.
+      if (['failed', 'error'].includes(next.status) || tries >= 120) clearInterval(timer);
     } catch {
-      if (tries >= 20) clearInterval(timer);
+      if (tries >= 120) clearInterval(timer);
     }
   }, 4000);
 
