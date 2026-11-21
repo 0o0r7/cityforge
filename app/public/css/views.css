@@ -572,6 +572,128 @@ details.faq p {
   color: var(--ink-2);
 }
 
+/* ---------- home: mechanics ---------- */
+
+.mechanics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.mechanic {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 45%), var(--surface);
+}
+
+.mechanic-tag {
+  justify-self: start;
+  padding: 3px 9px;
+  border: 1px solid rgba(255, 159, 69, 0.32);
+  border-radius: 999px;
+  background: rgba(255, 159, 69, 0.1);
+  color: var(--ember);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mechanic h3 {
+  font-size: 1.05rem;
+}
+
+.mechanic p {
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.mechanic-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mechanic-list li {
+  position: relative;
+  padding-left: 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.mechanic-list li::before {
+  content: "";
+  position: absolute;
+  top: 0.55em;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--ember);
+  opacity: 0.7;
+}
+
+.mechanic-link {
+  justify-self: start;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mechanic-link:hover {
+  text-decoration: underline;
+}
+
+.mechanic-foot {
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 12.5px !important;
+}
+
+.economy-flow {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg-2);
+  list-style: none;
+}
+
+.economy-flow li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.economy-flow li + li {
+  border-top: 1px solid rgba(51, 42, 35, 0.7);
+}
+
+.economy-flow b {
+  color: var(--ink-2);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.economy-flow li.out b {
+  color: var(--mint);
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 1080px) {

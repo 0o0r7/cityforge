@@ -1,6 +1,7 @@
 // Router and boot. Hash routes, one view at a time, cleanup between views.
 
 import { board } from './api.js';
+import { wireHelp } from './help.js';
 import { isEnabled, setEnabled, sfx } from './sound.js';
 import { guideView } from './views/guide.js';
 import { homeView } from './views/home.js';
@@ -104,6 +105,7 @@ function wireSound() {
 
 async function boot() {
   wireSound();
+  wireHelp();
   window.addEventListener('hashchange', render);
 
   try {
