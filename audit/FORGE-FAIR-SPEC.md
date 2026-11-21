@@ -142,8 +142,8 @@ is append-only by construction, not by policy.
 
 ### 6.1 Optional: Arc Testnet mirror
 
-- `chainId 5042002`, RPC `rpc.testnet.arc.network`, explorer `arcscan` (values recovered from
-  `artifacts/assets/ArcOwnerControl-*.js` in this repository).
+- `chainId 5042002`, RPC `rpc.testnet.arc.network`, explorer `arcscan` (values recovered from the
+  predecessor's owner-control bundle during the audit; not redistributed here).
 - USDC is the **native gas token**; there is no ERC-20 hop. Balances and transfers are plain value transfers.
 - Built only after the credit path is finished and only if the faucet works. It is a demonstration of the same
   signed settlement against real chain state, labelled as a mirror — never a substitute for the anchor.

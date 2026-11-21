@@ -27,7 +27,7 @@
 | 15 | zones | ✅ 200 | three eu.cc zones |
 | 16 | audit_logs | ❌ 403 | token scope |
 
-Raw evidence: this folder, `01…16.json` + `cityforge-edge-worker-source.js`. Two independent runs (20:12 and 20:45 UTC) produced byte-identical sizes → confirms deployment stability and audit reproducibility.
+Raw evidence: this folder, `01…16.json` (the recovered worker source is held outside this repository). Two independent runs (20:12 and 20:45 UTC) produced byte-identical sizes → confirms deployment stability and audit reproducibility.
 
 ## 2. Worker configuration — cityforge-edge
 - **ID/tag:** script_tag `313fb7d4b34f4540a8256bf74ebeef0a` · created 2026-08-22T19:44:10Z · modified 2026-08-22T20:19:48Z
