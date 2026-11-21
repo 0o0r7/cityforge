@@ -1,4 +1,4 @@
-# این ریپو فقط مستندات/شواهد حسابرسی است — هرگز این‌ها را کامیت نکنید:
+# Never commit credentials, local env files, dependencies or editor noise.
 .env
 .env.*
 *.pem
@@ -7,3 +7,7 @@
 credentials*
 node_modules/
 .DS_Store
+
+# Third-party evidence captured during the audit: kept outside this repository, never committed.
+artifacts/
+audit/cf-api/*worker-source*
